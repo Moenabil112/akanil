@@ -6,6 +6,7 @@ import {
 import { getSessionUser } from "@/lib/auth/session";
 import { getGrantedLevel } from "@/lib/data-room";
 import { authorizeDocumentAccess } from "@/lib/auth/roles";
+import { track } from "@/lib/analytics/server";
 import type { AccessLevel } from "@/lib/supabase/types";
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "akanil-data-room";
@@ -59,7 +60,10 @@ export async function POST(req: NextRequest) {
     authenticated: Boolean(user),
   });
 
+  await track("document_view_attempt", { level: doc.access_level as string });
+
   if (!decision.allowed) {
+    await track("signed_url_denied", { reason: decision.reason ?? "unknown" });
     const status = decision.reason === "unauthenticated" ? 401 : 403;
     return NextResponse.json({ error: "Access denied.", reason: decision.reason }, { status });
   }
@@ -89,6 +93,8 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[akanil] access log write failed", e);
   }
+
+  await track("signed_url_approved", { level: doc.access_level as string });
 
   return NextResponse.json({ url: signed.signedUrl, expiresIn: EXPIRY });
 }

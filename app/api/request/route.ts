@@ -4,6 +4,8 @@ import {
   isSupabaseConfigured,
   writeAuditLog,
 } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/send";
+import type { EmailEvent } from "@/lib/email/templates";
 import type { AccessLevel } from "@/lib/supabase/types";
 
 /**
@@ -135,6 +137,16 @@ export async function POST(req: NextRequest) {
     // Notification failure should not lose a persisted request.
     console.error("[akanil] failed to dispatch notification", err);
   }
+
+  // Branded acknowledgement to the submitter (best-effort, dev fallback).
+  const ackEvent: EmailEvent = isQassas
+    ? "qassas_demo_received"
+    : source === "briefing"
+      ? "briefing_received"
+      : source === "contact"
+        ? "contact_received"
+        : "data_room_request_received";
+  await sendEmail(ackEvent, email, { name, window: window ?? undefined }, recordId);
 
   return NextResponse.json({ ok: true, id: recordId });
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { REQUEST_TYPES } from "@/lib/site";
+import { track } from "@/lib/analytics/track";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -41,6 +43,14 @@ export function RequestForm({
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Request could not be submitted.");
       }
+      // Non-invasive conversion event keyed to the form's purpose.
+      track(
+        variant === "contact"
+          ? ANALYTICS_EVENTS.contact_submit
+          : variant === "briefing"
+            ? ANALYTICS_EVENTS.briefing_click
+            : ANALYTICS_EVENTS.data_room_request_click
+      );
       setStatus("success");
       form.reset();
     } catch (err) {

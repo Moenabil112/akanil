@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AdminShell, NotConfigured, Forbidden } from "@/components/admin/shell";
-import { Table, Th, Td, EmptyState } from "@/components/admin/widgets";
+import { Table, Th, Td, EmptyState, NdaBadge } from "@/components/admin/widgets";
 import { getAdminUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { getServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
@@ -93,6 +93,7 @@ export default async function AccessControlPage() {
                     </form>
                   </Td>
                   <Td>
+                    <div className="mb-2"><NdaBadge status={p.nda_status} /></div>
                     <form action={setProfileNdaAction} className="flex items-center gap-2">
                       <input type="hidden" name="profileId" value={p.id} />
                       <select name="nda_status" defaultValue={p.nda_status}

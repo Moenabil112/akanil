@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Favicon based on the centralized interim Akanil mark (gold on obsidian).
+       Replace alongside the official logo asset. -->
+  <rect width="128" height="128" rx="24" fill="#0A0C0E"/>
+  <g fill="none" stroke="#B8924A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,4)">
+    <path d="M64 12 L82 44 L64 62 L46 44 Z"/>
+    <path d="M56 56 L64 100 L72 56"/>
+    <path d="M50 64 L42 92 L60 100"/>
+    <path d="M78 64 L86 92 L68 100"/>
+    <path d="M24 38 C36 31 46 36 54 37"/>
+    <path d="M104 38 C92 31 82 36 74 37"/>
+  </g>
+</svg>

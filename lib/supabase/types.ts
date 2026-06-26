@@ -101,6 +101,14 @@ export const REQUEST_STATUSES: RequestStatus[] = [
   "closed",
 ];
 
+export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
+  pending: "Pending review",
+  in_review: "In review",
+  approved: "Approved",
+  declined: "Declined",
+  closed: "Closed",
+};
+
 // Human labels for the five Data Room layers (08 §6 / step 4).
 export const ACCESS_LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "public", label: "Public Layer" },

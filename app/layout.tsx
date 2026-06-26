@@ -35,12 +35,19 @@ export const metadata: Metadata = {
     "Sudan",
     "Saudi Arabia",
   ],
+  alternates: { canonical: "/" },
   openGraph: {
     title: `${SITE.name} — From Earth to Trust`,
     description: SITE.description,
     siteName: SITE.name,
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE.name} — From Earth to Trust`,
+    description: SITE.description,
+  },
+  icons: { icon: "/icon.svg" },
   robots: { index: true, follow: true },
 };
 

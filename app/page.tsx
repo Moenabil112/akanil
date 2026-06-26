@@ -3,6 +3,8 @@ import { WINDOWS, SITE } from "@/lib/site";
 import { WindowCard } from "@/components/window-card";
 import { TrustPathway } from "@/components/trust-pathway";
 import { Section, Eyebrow, CTAButton, CheckList } from "@/components/ui";
+import { TrackedLink } from "@/components/track";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 import { AkanilMark } from "@/components/logo";
 
 const WHAT_WE_BUILD = [
@@ -75,13 +77,23 @@ export default function HomePage() {
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
-              <CTAButton href="/contact">Request Institutional Briefing</CTAButton>
+              <TrackedLink
+                href="/contact"
+                event={ANALYTICS_EVENTS.briefing_click}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-gold px-5 py-3 text-sm font-medium text-obsidian transition-colors hover:bg-gold-light"
+              >
+                Request Institutional Briefing
+              </TrackedLink>
               <CTAButton href="#ecosystem" variant="outline">
                 Explore the Ecosystem
               </CTAButton>
-              <CTAButton href="/data-room" variant="ghost">
+              <TrackedLink
+                href="/data-room"
+                event={ANALYTICS_EVENTS.data_room_request_click}
+                className="inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-medium text-ivory-muted transition-colors hover:text-gold"
+              >
                 Access Data Room →
-              </CTAButton>
+              </TrackedLink>
             </div>
 
             <p className="mt-12 font-display text-sm font-medium uppercase tracking-[0.22em] text-gold/90">

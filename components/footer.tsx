@@ -89,6 +89,14 @@ export function Footer() {
           <p className="max-w-4xl text-xs leading-relaxed text-atlas-grey/80">
             {DISCLAIMER}
           </p>
+          <nav className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-atlas-grey/80">
+            <Link href="/legal" className="hover:text-gold">Governance &amp; Legal</Link>
+            <Link href="/legal/privacy" className="hover:text-gold">Privacy</Link>
+            <Link href="/legal/terms" className="hover:text-gold">Terms</Link>
+            <Link href="/legal/disclaimer" className="hover:text-gold">Disclaimer</Link>
+            <Link href="/legal/data-room-terms" className="hover:text-gold">Data Room Terms</Link>
+            <Link href="/legal/claims-disclosure" className="hover:text-gold">Claims &amp; Disclosure</Link>
+          </nav>
           <div className="mt-5 flex flex-col items-start justify-between gap-3 text-xs text-atlas-grey/70 sm:flex-row sm:items-center">
             <span>© {year} Akanil. All rights reserved.</span>
             <span className="tracking-wide">

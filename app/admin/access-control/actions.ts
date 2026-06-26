@@ -9,6 +9,8 @@ import {
   isSupabaseConfigured,
   writeAuditLog,
 } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/send";
+import { track } from "@/lib/analytics/server";
 import {
   ADMIN_ROLES,
   NDA_STATUSES,
@@ -60,10 +62,13 @@ export async function setProfileNdaAction(formData: FormData) {
   const status = String(formData.get("nda_status") || "") as NdaStatus;
   if (!profileId || !ndaValues.has(status)) return;
 
-  const { error } = await getServiceClient()
+  const supabase = getServiceClient();
+  const { data: updated, error } = await supabase
     .from("profiles")
     .update({ nda_status: status })
-    .eq("id", profileId);
+    .eq("id", profileId)
+    .select("email, full_name")
+    .maybeSingle();
   if (error) return console.error("[akanil] setProfileNda failed", error);
 
   await writeAuditLog({
@@ -73,6 +78,15 @@ export async function setProfileNdaAction(formData: FormData) {
     target_id: profileId,
     metadata: { nda_status: status },
   });
+
+  // Lifecycle email on key NDA transitions (best-effort, dev fallback).
+  if (updated?.email && (status === "signed" || status === "approved")) {
+    await sendEmail(
+      status === "approved" ? "data_room_activated" : "nda_received",
+      updated.email,
+      { name: updated.full_name ?? undefined }
+    );
+  }
   revalidatePath(PATH);
 }
 
@@ -128,5 +142,6 @@ export async function grantWindowAccessAction(formData: FormData) {
     target_id: profileId,
     metadata: { window, access_level: level },
   });
+  await track("access_level_change", { window, access_level: level });
   revalidatePath(PATH);
 }

@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { updateStatusAction } from "@/app/admin/actions";
-import { REQUEST_STATUSES, type RequestStatus } from "@/lib/supabase/types";
+import { ConfirmSubmit } from "./confirm-submit";
+import {
+  REQUEST_STATUSES,
+  REQUEST_STATUS_LABELS,
+  NDA_STATUSES,
+  type RequestStatus,
+  type NdaStatus,
+} from "@/lib/supabase/types";
 
 const STATUS_STYLE: Record<RequestStatus, string> = {
   pending: "border-gold/40 bg-gold/10 text-gold",
@@ -13,9 +20,27 @@ const STATUS_STYLE: Record<RequestStatus, string> = {
 export function StatusBadge({ status }: { status: RequestStatus }) {
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLE[status]}`}
+      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[status]}`}
     >
-      {status.replace("_", " ")}
+      {REQUEST_STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}
+
+const NDA_STYLE: Record<NdaStatus, string> = {
+  pending: "border-gold/40 bg-gold/10 text-gold",
+  sent: "border-teal/40 bg-teal/10 text-teal-light",
+  signed: "border-teal/40 bg-teal/10 text-teal-light",
+  approved: "border-emerald/40 bg-emerald/10 text-emerald-light",
+  expired: "border-atlas-line bg-obsidian-700 text-atlas-grey",
+  revoked: "border-copper/40 bg-copper/10 text-copper-light",
+};
+
+export function NdaBadge({ status }: { status: NdaStatus }) {
+  const label = NDA_STATUSES.find((s) => s.value === status)?.label ?? status;
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${NDA_STYLE[status]}`}>
+      NDA: {label}
     </span>
   );
 }
@@ -77,7 +102,7 @@ export function StatusSelect({
       >
         {REQUEST_STATUSES.map((s) => (
           <option key={s} value={s} className="bg-obsidian-800">
-            {s.replace("_", " ")}
+            {REQUEST_STATUS_LABELS[s]}
           </option>
         ))}
       </select>
@@ -109,8 +134,8 @@ export function QuickStatus({
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="path" value={path} />
           <input type="hidden" name="status" value={s} />
-          <button
-            type="submit"
+          <ConfirmSubmit
+            confirmMessage={`${s === "approved" ? "Approve" : "Decline"} this request? The applicant will be notified.`}
             className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
               s === "approved"
                 ? "border-emerald/40 text-emerald-light hover:bg-emerald hover:text-ivory"
@@ -118,7 +143,7 @@ export function QuickStatus({
             }`}
           >
             {s === "approved" ? "Approve" : "Decline"}
-          </button>
+          </ConfirmSubmit>
         </form>
       ))}
     </div>

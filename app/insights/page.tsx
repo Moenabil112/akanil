@@ -71,8 +71,8 @@ export default async function InsightsPage() {
               <p className="mt-3 flex-1 text-sm leading-relaxed text-atlas-grey">
                 {t.excerpt}
               </p>
-              <span className="mt-5 text-sm font-medium text-gold/60">
-                Full insight coming soon
+              <span className="mt-5 text-sm font-medium text-gold/70">
+                Request the full briefing →
               </span>
             </article>
           ))}
@@ -83,9 +83,9 @@ export default async function InsightsPage() {
             <span className="mx-auto">Editorial</span>
           </Eyebrow>
           <p className="mx-auto mt-5 max-w-xl text-atlas-grey">
-            The Insights library is published through the platform CMS (Sanity) in
-            Phase 2. To receive institutional briefs and governance memos directly,
-            request a briefing.
+            Akanil publishes structured perspectives on mineral trust, governance,
+            and institutional readiness. To receive institutional briefs and
+            governance memos directly, request a briefing.
           </p>
           <div className="mt-6">
             <CTAButton href="/contact">Request Institutional Briefing</CTAButton>

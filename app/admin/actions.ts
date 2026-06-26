@@ -11,6 +11,8 @@ import {
 } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { sendEmail } from "@/lib/email/send";
+import { track } from "@/lib/analytics/server";
 import type { RequestStatus } from "@/lib/supabase/types";
 
 const STATUS_TABLES = new Set([
@@ -94,6 +96,24 @@ export async function updateStatusAction(formData: FormData) {
     target_id: id,
     metadata: { status },
   });
+
+  // Notify the applicant + track on terminal decisions (best-effort, dev fallback).
+  if (status === "approved" || status === "declined") {
+    await track(status === "approved" ? "admin_approve" : "admin_decline", { table });
+    const { data: row } = await supabase
+      .from(table)
+      .select("email, full_name")
+      .eq("id", id)
+      .maybeSingle();
+    if (row?.email) {
+      await sendEmail(
+        status === "approved" ? "access_approved" : "access_rejected",
+        row.email,
+        { name: row.full_name ?? undefined },
+        id
+      );
+    }
+  }
 
   revalidatePath(path);
 }

@@ -234,8 +234,50 @@ and `lib/site.ts`.
   policies (migrations `0004`/`0005`, validated against Postgres), locked-document
   data room UX with access badges, admin document filters + quick approve,
   Sanity wiring across all windows (static fallback), governance maturity badges.
-- **Phase 3C+ — next:** end-user signup/profile provisioning, production env
-  wiring, full CMS field rendering (beyond hero), data room analytics.
+- **Phase 3C — Launch readiness & QA hardening** ✅ launch checklists
+  (`docs/launch/`), SEO/metadata (canonical, OG, Twitter, favicon, robots,
+  sitemap), 9 governance/legal placeholder pages (`/legal/*`), 13 branded email
+  templates with dev fallback, admin polish (status labels, NDA badges, request
+  search/filter, confirm-on-approve), data room UX polish (counts by access
+  level, locked cards), analytics event map, content positioning pass.
+- **Phase 3D+ — next:** end-user signup/profile provisioning, production env
+  wiring, full CMS field rendering (beyond hero), legal sign-off.
+
+## Launch readiness (Phase 3C)
+
+- **Checklists:** `docs/launch/` — launch, environment setup, production
+  readiness, security, data room readiness, content readiness, admin operations.
+- **SEO:** per-route titles/descriptions, canonical + Open Graph + Twitter cards
+  (`lib/seo.ts`), `app/icon.svg` favicon (from the centralized mark),
+  `app/robots.ts` (disallows `/admin`, `/api`, `/auth`, private data room), and
+  `sitemap.ts` (public + legal pages). Private/admin pages are `noindex`.
+- **Legal & governance:** `/legal` index + `/legal/[slug]` for Privacy, Terms,
+  Disclaimer, Cookie Notice, IP Notice, Data Room Access Terms, NDA Process Note,
+  Claims & Disclosure Policy, QASSAS Disclosure Note — each marked **“requires
+  legal review before launch.”** Content is claims-controlled.
+- **Email:** `lib/email/templates.ts` — 13 branded transactional templates
+  (received / under review / approved / rejected / NDA required / NDA received /
+  data room activated / expiring soon / QASSAS received / QASSAS approved /
+  additional info). `lib/email/send.ts` sends via Resend or logs in dev fallback
+  and records to `email_logs`. Wired into intake acks, approve/decline, and NDA
+  transitions.
+- **Analytics:** `lib/analytics/` event map — briefing/data-room/QASSAS/contact
+  clicks, document view attempts, signed-URL approve/deny, admin approve/decline,
+  access-level changes. Non-invasive; no-ops (dev log) unless Plausible/PostHog
+  is configured. No tracking cookies.
+
+## Route map
+
+| Area | Routes |
+| --- | --- |
+| Public | `/`, `/akanil`, `/founder`, `/atlas-mining`, `/hyrion`, `/zyntra`, `/zyntra/qassas`, `/amusnaw-ai`, `/sustainability`, `/insights`, `/contact` |
+| Data room (public) | `/data-room` |
+| Data room (gated) | `/data-room/status`, `/data-room/access-control`, `/data-room/[window]` |
+| Auth | `/auth/sign-in`, `/auth/sign-out` |
+| Legal | `/legal`, `/legal/[slug]` |
+| Admin (gated) | `/admin`, `/admin/access-requests`, `/admin/briefings`, `/admin/qassas`, `/admin/contacts`, `/admin/organizations`, `/admin/documents`, `/admin/documents/new`, `/admin/documents/[id]`, `/admin/access-control`, `/admin/downloads`, `/admin/audit`, `/admin/login` |
+| API | `/api/request`, `/api/data-room/download` |
+| SEO | `/sitemap.xml`, `/robots.txt`, `/icon.svg` |
 
 ### Row Level Security
 

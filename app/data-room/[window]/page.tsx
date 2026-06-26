@@ -84,6 +84,24 @@ export default async function DataRoomWindowPage({
           Documents above your clearance are shown as locked. File locations are
           never exposed.
         </p>
+
+        {documents.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {ACCESS_LEVELS.map((l) => {
+              const count = documents.filter((d) => d.access_level === l.value).length;
+              if (count === 0) return null;
+              return (
+                <span
+                  key={l.value}
+                  className="rounded-full border border-atlas-line bg-obsidian-800 px-3 py-1 text-xs text-atlas-grey"
+                >
+                  {l.label}: <span className="text-ivory">{count}</span>
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         <div className="mt-6">
           <DocumentList documents={documents} windowLabel={win.label} />
         </div>

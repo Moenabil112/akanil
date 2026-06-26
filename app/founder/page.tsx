@@ -5,7 +5,7 @@ import { getWindowHero } from "@/lib/sanity/queries";
 export const metadata: Metadata = {
   title: "Mohamed Nabil — Mining Intelligence & Strategic Minerals Trust Architect",
   description:
-    "Mohamed Nabil is the Founder of Akanil, working at the intersection of mining, AI, governance, strategic minerals, and institutional investment readiness.",
+    "Mohamed Nabil is the founder of Akanil and co-founder of ZYNTRA Deeptech, working at the intersection of mining, AI, governance, strategic minerals, and institutional investment readiness.",
 };
 
 const FOCUS = [
@@ -32,7 +32,7 @@ export default async function FounderPage() {
         }
         intro={
           hero?.heroIntro ||
-          "Founder of Akanil and a project developer working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
+          "Founder of Akanil and co-founder of ZYNTRA Deeptech, working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
         }
         accent="gold"
       />
@@ -42,10 +42,12 @@ export default async function FounderPage() {
           <div className="space-y-6">
             <Eyebrow>Short Bio</Eyebrow>
             <p className="text-atlas-grey">
-              Through Akanil, Mohamed Nabil develops trust architecture around
+              Mohamed Nabil is the founder of Akanil and co-founder of ZYNTRA
+              Deeptech, the AI infrastructure and automation layer of the
+              ecosystem. Through Akanil, he develops trust architecture around
               mineral projects, helping transform field intelligence, documents,
-              and technical assumptions into structured evidence and decision-ready
-              institutional pathways.
+              and technical assumptions into structured evidence and
+              decision-ready institutional pathways.
             </p>
             <blockquote className="rounded-xl border border-atlas-line bg-obsidian-800 p-7">
               <p className="font-display text-lg leading-relaxed text-ivory">
