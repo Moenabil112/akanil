@@ -48,15 +48,82 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 ## Access request flow
 
 All briefing, contact, data room, and QASSAS demo forms post to
-`POST /api/request`. The handler validates input and dispatches an admin
-notification:
+`POST /api/request`. The handler validates input, **persists it to the matching
+Supabase table**, records an audit entry, then dispatches an admin notification:
 
-- With `RESEND_API_KEY` + `ADMIN_NOTIFICATION_EMAIL` set → emails the admin.
-- Without them (local/preview) → logs a structured record to the server console,
-  so the flow is fully testable without external services.
+| Form source | Supabase table |
+| --- | --- |
+| Data Room | `access_requests` |
+| Briefing | `briefing_requests` |
+| Contact | `contact_messages` |
+| QASSAS demo (request type) | `qassas_demo_requests` |
 
-This is the seam where Supabase persistence (`access_requests`) and the NDA /
-admin-review workflow plug in for Phase 3.
+- With Supabase env vars set → the request is stored and shows up in the admin
+  dashboard; an `audit_logs` row is written.
+- With `RESEND_API_KEY` + `ADMIN_NOTIFICATION_EMAIL` set → emails the admin and
+  writes an `email_logs` row.
+- With neither configured (local/preview) → logs a structured record to the
+  server console, so the flow stays fully testable without external services.
+
+## Database (Supabase)
+
+The institutional access backend is defined in `supabase/migrations/0001_init.sql`
+(tables follow `08_Akanil_Backend_Recommendation_EN.md` + `13_*.sql`):
+
+`organizations`, `profiles`, `access_requests`, `briefing_requests`,
+`qassas_demo_requests`, `contact_messages`, `documents`, `document_access_logs`,
+`nda_records`, `window_permissions`, `audit_logs`, `email_logs`.
+
+RLS is enabled and **deny-by-default** on every table. The site reads/writes only
+through the service-role key on the server; the anon key never touches these
+tables. Authenticated partner/end-user policies + Supabase Auth arrive in Phase 3.
+
+```bash
+# with the Supabase CLI and a linked project
+supabase db push                # or: psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
+```
+
+Then set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Data Room layers
+
+The five access levels (`access_level` enum) are the Data Room structure:
+**Public → Institutional Brief → NDA Data Room → Technical Review →
+Partner / Internal**. Documents carry an `access_level` and a `storage_path`
+that is never exposed. **Private file access is gated**: the admin manages
+metadata only; authenticated, NDA-checked signed-URL delivery is Phase 3.
+
+## Admin dashboard
+
+A custom review console lives under `/admin`, gated by middleware. Modules:
+overview, access requests, briefings, QASSAS demos, contacts, organizations,
+documents (metadata), and the audit log. Request statuses are updated inline via
+server actions that also write to `audit_logs`.
+
+Sign-in (`/admin/login`) checks `ADMIN_DASHBOARD_PASSWORD` and, if set, an email
+allow-list (`ADMIN_ALLOWED_EMAILS`), then issues an HMAC-signed session cookie
+(`ADMIN_SESSION_SECRET`). This is a deliberately minimal Phase 2A gate — full
+Supabase Auth + role-based access control replaces it in Phase 3.
+
+```bash
+ADMIN_DASHBOARD_PASSWORD=choose-a-strong-password
+ADMIN_SESSION_SECRET=long-random-string
+ADMIN_ALLOWED_EMAILS=you@example.com   # optional allow-list
+```
+
+## Known issues
+
+- **Notification fallback logging (non-blocking).** When `RESEND_API_KEY` /
+  `ADMIN_NOTIFICATION_EMAIL` are not set, request notifications are written to
+  the server console (`console.info("[akanil] request received: …")`) instead of
+  emailed. Requests are still persisted to Supabase (when configured) and visible
+  in the admin dashboard — no submissions are lost — but admins are not actively
+  notified until an email provider is configured. Resolve by setting the Resend
+  variables in production.
+- **Logo is an interim reproduction.** `components/logo.tsx` /
+  `public/akanil-mark.svg` are a faithful hand-traced rendition of the official
+  mark, not the approved vector (no logo asset was included in the knowledge
+  package). Replace with the official gold-on-dark SVG to lock exact proportions.
 
 ## Project structure
 
@@ -81,11 +148,15 @@ and `lib/site.ts`.
 
 ## Roadmap
 
-This implements **Phase 1 (Institutional Website MVP)** and the full set of
-public window pages from Phase 2. Phases 3–5 (authentication, private document
-library, window-based permissions, audit logs, HYRION governance layer, and the
-protected QASSAS demo flow) build on the access-request seam and the Supabase /
-Sanity environment configuration already scaffolded here.
+- **Phase 1 — Institutional Website MVP** ✅ public windows, request flows.
+- **Phase 2A — Persistence + Admin + Logo** ✅ Supabase migration, request
+  persistence, audit logs, the `/admin` review dashboard, Data Room layer
+  schema (files gated), interim official-logo reproduction.
+- **Phase 2B — next:** Sanity CMS schemas for the public windows + Insights,
+  document upload/metadata editing in admin.
+- **Phase 3 — Controlled Data Room:** Supabase Auth, NDA workflow, window
+  permissions, signed-URL file delivery, download audit logging.
+- **Phase 4–5 — HYRION governance layer + protected QASSAS demo flow.**
 
 ---
 

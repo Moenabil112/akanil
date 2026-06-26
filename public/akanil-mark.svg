@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="Akanil">
+  <!--
+    INTERIM Akanil mark — a faithful reproduction of the gold lotus-and-waves
+    emblem (central flame petal, lotus cup, flanking water lines). This is NOT
+    the final approved vector; replace with the official asset when available.
+  -->
+  <g stroke="#B8924A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- central flame / crown petal -->
+    <path d="M64 12 L84 52 L64 80 L44 52 Z" />
+    <!-- inner lotus petals -->
+    <path d="M44 56 L34 88 L64 100 L94 88 L84 56" />
+    <path d="M52 64 L64 84 L76 64" />
+    <!-- left wave / wing lines -->
+    <path d="M20 40 C34 33 44 39 52 36" opacity="0.9" />
+    <path d="M16 56 C32 49 42 55 50 52" opacity="0.65" />
+    <!-- right wave / wing lines -->
+    <path d="M108 40 C94 33 84 39 76 36" opacity="0.9" />
+    <path d="M112 56 C96 49 86 55 78 52" opacity="0.65" />
+    <!-- lotus base -->
+    <path d="M40 96 L64 108 L88 96" opacity="0.85" />
+  </g>
+</svg>

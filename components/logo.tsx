@@ -1,29 +1,35 @@
 import Link from "next/link";
 
-// Akanil mark — a stylized lotus/diamond with water-line motifs, echoing the
-// official brand symbol (gold-on-dark primary version). Replace `mark` with the
-// approved SVG asset when available; the wordmark stays as set type.
+// Akanil mark — INTERIM faithful reproduction of the official gold lotus-and-waves
+// emblem (central flame petal, lotus cup, flanking water lines), rendered as a
+// vector so it inherits `currentColor` (gold-on-dark primary). This is NOT the
+// final approved asset: drop the official Akanil SVG in `public/akanil-mark.svg`
+// and this component's paths to swap it exactly with correct proportions.
 export function AkanilMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 64 64"
+      viewBox="0 0 128 128"
       className={className}
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.4"
+      strokeWidth="4"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {/* central diamond / lotus crown */}
-      <path d="M32 6 L43 26 L32 40 L21 26 Z" />
-      {/* lower lotus petals */}
-      <path d="M21 30 L14 44 L32 52 L50 44 L43 30" />
-      {/* water lines */}
-      <path d="M10 22 C18 18 24 22 30 20" opacity="0.85" />
-      <path d="M54 22 C46 18 40 22 34 20" opacity="0.85" />
-      <path d="M12 34 C19 31 24 34 29 33" opacity="0.6" />
-      <path d="M52 34 C45 31 40 34 35 33" opacity="0.6" />
+      {/* central flame / crown petal */}
+      <path d="M64 12 L84 52 L64 80 L44 52 Z" />
+      {/* inner lotus petals */}
+      <path d="M44 56 L34 88 L64 100 L94 88 L84 56" />
+      <path d="M52 64 L64 84 L76 64" />
+      {/* left wave / wing lines */}
+      <path d="M20 40 C34 33 44 39 52 36" opacity="0.9" />
+      <path d="M16 56 C32 49 42 55 50 52" opacity="0.6" />
+      {/* right wave / wing lines */}
+      <path d="M108 40 C94 33 84 39 76 36" opacity="0.9" />
+      <path d="M112 56 C96 49 86 55 78 52" opacity="0.6" />
+      {/* lotus base */}
+      <path d="M40 96 L64 108 L88 96" opacity="0.85" />
     </svg>
   );
 }
