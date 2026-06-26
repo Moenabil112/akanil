@@ -57,7 +57,7 @@ export default async function AmusnawPage() {
   return (
     <>
       <PageHeader
-        eyebrow={hero?.eyebrow || "Digital Window · Amusnaw AI"}
+        eyebrow={hero?.eyebrow || "Extended Ecosystem · Amusnaw AI"}
         title={
           hero?.title ||
           "Amusnaw AI — Moroccan Smart Mining Intelligence Infrastructure"
@@ -71,8 +71,21 @@ export default async function AmusnawPage() {
           "Amusnaw AI aims to transform mining and strategic minerals data into a Moroccan digital infrastructure for review, development, and institutional decision-making."
         }
         accent="emerald"
-        badge="Institutional Smart Mining Infrastructure Concept"
+        badge="Extended Ecosystem · Morocco Intelligence Layer"
       />
+
+      <div className="border-b border-atlas-line bg-obsidian-900">
+        <div className="container-content py-4">
+          <p className="text-sm text-atlas-grey">
+            <span className="mr-2 rounded-full border border-emerald/40 bg-emerald/10 px-2.5 py-0.5 text-xs font-medium text-emerald-light">
+              Deferred Module
+            </span>
+            Amusnaw AI is a Morocco-oriented module on the broader roadmap. It
+            remains part of the platform but is not a primary node in the current
+            ecosystem emphasis.
+          </p>
+        </div>
+      </div>
 
       <Section>
         <div className="grid gap-12 lg:grid-cols-2">

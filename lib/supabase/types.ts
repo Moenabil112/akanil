@@ -84,12 +84,12 @@ export const DOCUMENT_STATUSES: { value: DocumentStatus; label: string }[] = [
 // Windows a document can belong to (mirrors the public ecosystem).
 export const DOCUMENT_WINDOWS = [
   "Akanil",
-  "Atlas Mining",
+  "ATLAS Golden Mining",
   "HYRION",
   "ZYNTRA Deeptech",
   "QASSAS",
   "Amusnaw AI",
-  "Sustainability",
+  "Mustadam",
   "General",
 ] as const;
 

@@ -34,13 +34,13 @@ export function Navbar() {
       <div className="container-content flex h-16 items-center justify-between gap-4">
         <Logo />
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-0.5 lg:flex">
           {NAV.map((item) =>
             item.children ? (
               <div key={item.href} className="group relative">
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-1 rounded-md px-3 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-1 rounded-md px-2 py-2 text-[13px] transition-colors ${
                     isActive(item.href)
                       ? "text-gold"
                       : "text-ivory-muted hover:text-ivory"
@@ -79,7 +79,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-2 text-sm transition-colors ${
+                className={`whitespace-nowrap rounded-md px-2 py-2 text-[13px] transition-colors ${
                   isActive(item.href)
                     ? "text-gold"
                     : "text-ivory-muted hover:text-ivory"
@@ -90,15 +90,6 @@ export function Navbar() {
             )
           )}
         </nav>
-
-        <div className="hidden lg:block">
-          <Link
-            href="/data-room"
-            className="rounded-md border border-gold/50 px-4 py-2 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-obsidian"
-          >
-            Request Access
-          </Link>
-        </div>
 
         <button
           type="button"

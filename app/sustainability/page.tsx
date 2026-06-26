@@ -3,9 +3,9 @@ import { PageHeader, Section, Eyebrow, CTAButton } from "@/components/ui";
 import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
-  title: "Sustainability — Fair Governance of Natural Resources",
+  title: "Mustadam — Sustainability & Local Impact Layer",
   description:
-    "Akanil treats sustainability as the fair governance of natural resources with visible developmental impact for people, land, water, energy, and local knowledge.",
+    "Mustadam (مُستدام) is Akanil's sustainability and local impact layer for fair resource governance, people of place, water, energy, agriculture, ecological building, and environmental sanitation.",
 };
 
 const PILLARS = [
@@ -87,14 +87,11 @@ export default async function SustainabilityPage() {
   return (
     <>
       <PageHeader
-        eyebrow={hero?.eyebrow || "Sustainability & Local Impact"}
-        title={
-          hero?.title ||
-          "Fair governance of natural resources, with visible developmental impact."
-        }
+        eyebrow={hero?.eyebrow || "Mustadam · مُستدام"}
+        title={hero?.title || "Mustadam — Sustainability & Local Impact Layer"}
         intro={
           hero?.heroIntro ||
-          "Akanil treats sustainability as a development philosophy and impact framework — not a marketing claim. Quantified impact claims are made only where supported by metrics and evidence."
+          "Mustadam is Akanil's sustainability and local impact layer for fair resource governance, people of place, water, energy, agriculture, ecological building, and environmental sanitation. It is a development philosophy and impact framework — quantified claims are made only where supported by metrics and evidence."
         }
         coreMessage={
           hero?.coreMessage ||
@@ -143,7 +140,7 @@ export default async function SustainabilityPage() {
             governed development interface.
           </p>
           <div className="mt-6">
-            <CTAButton href="/contact">Request Sustainability Framework Memo</CTAButton>
+            <CTAButton href="/contact">Request Mustadam Framework Memo</CTAButton>
           </div>
         </div>
       </Section>

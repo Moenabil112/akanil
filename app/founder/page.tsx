@@ -25,15 +25,16 @@ export default async function FounderPage() {
   return (
     <>
       <PageHeader
-        eyebrow={hero?.eyebrow || "Founder"}
+        eyebrow={hero?.eyebrow || "Founder & Leadership Layer"}
         title={
           hero?.title ||
-          "Mohamed Nabil — Mining Intelligence & Strategic Minerals Trust Architect"
+          "Mohamed Nabil — Founder of Akanil & Co-Founder of ZYNTRA Deeptech"
         }
         intro={
           hero?.heroIntro ||
-          "Founder of Akanil and co-founder of ZYNTRA Deeptech, working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
+          "Architect of Mining Intelligence, Trust Governance & Sustainable Resource Systems — working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
         }
+        coreMessage={hero?.coreMessage || "Reading the Land → Structuring Knowledge → Building Trust"}
         accent="gold"
       />
 

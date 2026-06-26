@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AkanilMark } from "./logo";
-import { WINDOWS, NAV, SITE, DISCLAIMER } from "@/lib/site";
+import { PRIMARY_NODES, DEFERRED_MODULES, NAV, SITE, DISCLAIMER } from "@/lib/site";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -30,7 +30,7 @@ export function Footer() {
               Ecosystem
             </h3>
             <ul className="mt-4 space-y-2.5">
-              {WINDOWS.map((w) => (
+              {[...PRIMARY_NODES, ...DEFERRED_MODULES].map((w) => (
                 <li key={w.slug}>
                   <Link
                     href={w.href}
@@ -49,7 +49,7 @@ export function Footer() {
             </h3>
             <ul className="mt-4 space-y-2.5">
               {NAV.filter((n) =>
-                ["Founder", "Sustainability", "Insights", "Data Room", "Contact"].includes(
+                ["Founder", "Mustadam", "Insights", "Data Room", "Contact"].includes(
                   n.label
                 )
               ).map((n) => (

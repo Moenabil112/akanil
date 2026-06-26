@@ -56,7 +56,7 @@ export default async function ZyntraPage() {
           "ZYNTRA helps mining operations see what is happening, understand why it is happening, and make better operating decisions."
         }
         accent="teal"
-        badge="AI Infrastructure & Automation Company"
+        badge="AI Infrastructure & Automation Layer"
       />
 
       {/* QASSAS product banner */}

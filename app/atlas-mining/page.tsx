@@ -10,9 +10,9 @@ import {
 import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
-  title: "Atlas Mining — Field Operating Proof Layer",
+  title: "ATLAS Golden Mining — Mining Portfolio / Field Use Case Layer",
   description:
-    "Atlas Mining is the field-operating proof layer within the Akanil ecosystem, focused on copper development, mobile processing concepts, and structured technical evidence in Morocco.",
+    "ATLAS Golden Mining is the mining portfolio and field use-case layer within the Akanil ecosystem, focused on copper development, mobile processing concepts, and structured technical evidence.",
 };
 
 const FOCUS = [
@@ -42,18 +42,18 @@ export default async function AtlasMiningPage() {
   return (
     <>
       <PageHeader
-        eyebrow={hero?.eyebrow || "Digital Window · Atlas Mining"}
-        title={hero?.title || "Atlas Mining — Field Operating Proof Layer"}
+        eyebrow={hero?.eyebrow || "Core Layer · ATLAS Golden Mining"}
+        title={hero?.title || "ATLAS Golden Mining — Mining Portfolio / Field Use Case Layer"}
         intro={
           hero?.heroIntro ||
-          "Atlas Mining connects the Akanil trust architecture to real field-operating mining cases, with a focus on copper development, quarries, sampling, mobile processing concepts, and structured technical evidence in Morocco."
+          "ATLAS Golden Mining connects the Akanil trust architecture to real field-operating mining cases — the portfolio and use-case layer covering copper development, quarries, sampling, mobile processing concepts, and structured technical evidence."
         }
         coreMessage={
           hero?.coreMessage ||
-          "Atlas Mining connects land to data, data to evidence rooms, and evidence rooms to institutional decision-making."
+          "ATLAS Golden Mining connects land to data, data to evidence rooms, and evidence rooms to institutional decision-making."
         }
         accent="copper"
-        badge="Field Operating Proof Layer"
+        badge="Mining Portfolio / Field Use Case Layer"
       />
 
       <Section>

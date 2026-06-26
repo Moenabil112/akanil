@@ -64,7 +64,7 @@ export default async function HyrionPage() {
           "HYRION transforms mineral information into structured evidence, and structured evidence into reviewable institutional decisions."
         }
         accent="teal"
-        badge="Governance Layer"
+        badge="Evidence, Governance & Data Room Layer"
       />
 
       <Section>

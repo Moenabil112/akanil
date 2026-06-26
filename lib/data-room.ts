@@ -11,12 +11,12 @@ import type { AccessLevel } from "@/lib/supabase/types";
 // Data Room windows (slug ↔ document `window` label).
 export const DATA_ROOM_WINDOWS = [
   { slug: "akanil", label: "Akanil" },
-  { slug: "atlas-mining", label: "Atlas Mining" },
+  { slug: "atlas-mining", label: "ATLAS Golden Mining" },
   { slug: "hyrion", label: "HYRION" },
   { slug: "zyntra", label: "ZYNTRA Deeptech" },
   { slug: "qassas", label: "QASSAS" },
   { slug: "amusnaw-ai", label: "Amusnaw AI" },
-  { slug: "sustainability", label: "Sustainability" },
+  { slug: "sustainability", label: "Mustadam" },
   { slug: "general", label: "General" },
 ] as const;
 
