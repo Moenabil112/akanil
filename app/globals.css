@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-obsidian text-ivory font-sans antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(184, 146, 74, 0.28);
+  color: #f4f1e9;
+}
+
+@layer components {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-6 md:px-8;
+  }
+
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.22em] text-gold/80;
+  }
+
+  .heading-xl {
+    @apply font-display text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl;
+  }
+
+  .heading-lg {
+    @apply font-display text-3xl font-semibold leading-tight tracking-tight md:text-4xl;
+  }
+
+  .heading-md {
+    @apply font-display text-xl font-semibold tracking-tight md:text-2xl;
+  }
+
+  .body-lead {
+    @apply text-base leading-relaxed text-ivory-muted md:text-lg;
+  }
+
+  .hairline {
+    @apply border-atlas-line;
+  }
+
+  /* Quiet institutional signature — cultural geometry grid */
+  .geo-surface {
+    background-image: var(--tw-bg-geo, none);
+    background-size: 56px 56px;
+  }
+}
+
+/* Thin scrollbar in the institutional palette */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2c333b #0a0c0e;
+}
