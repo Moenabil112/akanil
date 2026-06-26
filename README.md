@@ -78,9 +78,17 @@ RLS is enabled and **deny-by-default** on every table. The site reads/writes onl
 through the service-role key on the server; the anon key never touches these
 tables. Authenticated partner/end-user policies + Supabase Auth arrive in Phase 3.
 
+Migrations live in `supabase/migrations/` and run in order:
+
+- `0001_init.sql` — core tables, enums, RLS.
+- `0002_documents_metadata.sql` — extended document metadata (sensitivity,
+  status, owner, review/expiry dates, approver, related entity, tags) and the
+  **private** `akanil-data-room` storage bucket (`public = false`).
+
 ```bash
 # with the Supabase CLI and a linked project
-supabase db push                # or: psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
+supabase db push      # or: psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql \
+                      #      && psql "$DATABASE_URL" -f supabase/migrations/0002_documents_metadata.sql
 ```
 
 Then set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
@@ -97,8 +105,30 @@ metadata only; authenticated, NDA-checked signed-URL delivery is Phase 3.
 
 A custom review console lives under `/admin`, gated by middleware. Modules:
 overview, access requests, briefings, QASSAS demos, contacts, organizations,
-documents (metadata), and the audit log. Request statuses are updated inline via
-server actions that also write to `audit_logs`.
+documents, and the audit log. Request statuses are updated inline via server
+actions that also write to `audit_logs`.
+
+**Document management** (`/admin/documents`, `…/new`, `…/[id]`): create and edit
+the full metadata model — title, window, type, sensitivity, access level,
+language, version, status, owner, review/expiry dates, approver, related entity,
+tags. Files upload to the private storage bucket server-side; the raw
+`storage_path` is never rendered (only "attached / none"), and no download URL is
+issued — the Data Room stays metadata-only until Phase 3 signed-URL delivery.
+
+## Content (Sanity CMS)
+
+The CMS lives in `sanity/` as a **decoupled studio workspace** (its own
+`package.json`, excluded from the web build). It defines schemas for all public
+windows — `akanilPage`, `founderPage`, `atlasMiningPage`, `hyrionPage`,
+`zyntraPage`, `qassasPage`, `amusnawAiPage`, `sustainabilityPage` — plus
+`insight` articles and shared objects. Run it separately:
+
+```bash
+cd sanity && npm install && npm run dev   # studio on :3333
+```
+
+Pages currently render static content; wiring them to Sanity (read client +
+per-route fetch) is the next step. See `sanity/README.md`.
 
 Sign-in (`/admin/login`) checks `ADMIN_DASHBOARD_PASSWORD` and, if set, an email
 allow-list (`ADMIN_ALLOWED_EMAILS`), then issues an HMAC-signed session cookie
@@ -152,10 +182,12 @@ and `lib/site.ts`.
 - **Phase 2A — Persistence + Admin + Logo** ✅ Supabase migration, request
   persistence, audit logs, the `/admin` review dashboard, Data Room layer
   schema (files gated), interim official-logo reproduction.
-- **Phase 2B — next:** Sanity CMS schemas for the public windows + Insights,
-  document upload/metadata editing in admin.
+- **Phase 2B — CMS + Documents** ✅ Sanity schemas for all public windows +
+  Insights (in `sanity/`); admin document upload + full metadata editing
+  (files gated, paths never exposed); migration `0002` + private storage bucket.
 - **Phase 3 — Controlled Data Room:** Supabase Auth, NDA workflow, window
-  permissions, signed-URL file delivery, download audit logging.
+  permissions, signed-URL file delivery, download audit logging; wire pages to
+  Sanity content.
 - **Phase 4–5 — HYRION governance layer + protected QASSAS demo flow.**
 
 ---

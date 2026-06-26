@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AdminShell, NotConfigured } from "@/components/admin/shell";
 import { Table, Th, Td, EmptyState, formatDate } from "@/components/admin/widgets";
 import { getAdminSession } from "@/lib/admin/session";
 import { getServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import { ACCESS_LEVELS, type DocumentRecord } from "@/lib/supabase/types";
+import {
+  ACCESS_LEVELS,
+  SENSITIVITY_LEVELS,
+  type DocumentRecord,
+} from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -61,37 +66,63 @@ export default async function DocumentsPage() {
         Authenticated, NDA-checked, signed-URL delivery arrives in Phase 3.
       </div>
 
-      <h2 className="heading-md mb-3 text-ivory">Document index</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="heading-md text-ivory">Document index</h2>
+        <Link
+          href="/admin/documents/new"
+          className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-obsidian transition-colors hover:bg-gold-light"
+        >
+          + Add document
+        </Link>
+      </div>
       {rows.length === 0 ? (
-        <EmptyState message="No documents indexed yet. Metadata is added as the data room is populated." />
+        <EmptyState message="No documents indexed yet. Use “Add document” to register metadata and (optionally) upload a gated file." />
       ) : (
         <Table>
           <thead>
             <tr>
               <Th>Title</Th>
               <Th>Window</Th>
-              <Th>Type</Th>
-              <Th>Access level</Th>
-              <Th>Ver.</Th>
-              <Th>Active</Th>
+              <Th>Access / Sensitivity</Th>
+              <Th>Status</Th>
+              <Th>File</Th>
               <Th>Updated</Th>
+              <Th>Edit</Th>
             </tr>
           </thead>
           <tbody>
             {rows.map((d) => (
               <tr key={d.id}>
                 <Td>
-                  <div className="font-medium text-ivory">{d.title}</div>
-                  {d.description && (
-                    <p className="max-w-xs text-xs text-atlas-grey">{d.description}</p>
-                  )}
+                  <Link href={`/admin/documents/${d.id}`} className="font-medium text-ivory hover:text-gold">
+                    {d.title}
+                  </Link>
+                  <div className="text-xs text-atlas-grey">
+                    {d.document_type ?? "—"} · v{d.version ?? "1"}
+                  </div>
                 </Td>
                 <Td>{d.window ?? "—"}</Td>
-                <Td>{d.document_type ?? "—"}</Td>
-                <Td>{ACCESS_LEVELS.find((l) => l.value === d.access_level)?.label ?? d.access_level}</Td>
-                <Td>{d.version ?? "—"}</Td>
-                <Td>{d.is_active ? "Yes" : "No"}</Td>
+                <Td>
+                  {ACCESS_LEVELS.find((l) => l.value === d.access_level)?.label ?? d.access_level}
+                  <div className="text-xs text-atlas-grey">
+                    {SENSITIVITY_LEVELS.find((s) => s.value === d.sensitivity_level)?.label ??
+                      d.sensitivity_level}
+                  </div>
+                </Td>
+                <Td>
+                  <span className="capitalize">{(d.status ?? "draft").replace("_", " ")}</span>
+                </Td>
+                <Td>
+                  <span className={d.storage_path ? "text-emerald-light" : "text-atlas-grey"}>
+                    {d.storage_path ? "attached" : "none"}
+                  </span>
+                </Td>
                 <Td>{formatDate(d.updated_at)}</Td>
+                <Td>
+                  <Link href={`/admin/documents/${d.id}`} className="text-sm font-medium text-gold hover:underline">
+                    Edit
+                  </Link>
+                </Td>
               </tr>
             ))}
           </tbody>

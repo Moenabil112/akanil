@@ -2,6 +2,9 @@
 /node_modules
 /.pnp
 .pnp.js
+sanity/node_modules
+sanity/dist
+sanity/.sanity
 
 # next.js
 /.next/

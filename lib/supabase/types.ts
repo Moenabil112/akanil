@@ -19,6 +19,48 @@ export type RequestStatus =
 
 export type NdaStatus = "pending" | "sent" | "signed" | "expired" | "revoked";
 
+export type SensitivityLevel =
+  | "public"
+  | "internal"
+  | "confidential"
+  | "restricted"
+  | "secret";
+
+export type DocumentStatus =
+  | "draft"
+  | "in_review"
+  | "approved"
+  | "published"
+  | "archived";
+
+export const SENSITIVITY_LEVELS: { value: SensitivityLevel; label: string }[] = [
+  { value: "public", label: "Public" },
+  { value: "internal", label: "Internal" },
+  { value: "confidential", label: "Confidential" },
+  { value: "restricted", label: "Restricted" },
+  { value: "secret", label: "Secret" },
+];
+
+export const DOCUMENT_STATUSES: { value: DocumentStatus; label: string }[] = [
+  { value: "draft", label: "Draft" },
+  { value: "in_review", label: "In review" },
+  { value: "approved", label: "Approved" },
+  { value: "published", label: "Published" },
+  { value: "archived", label: "Archived" },
+];
+
+// Windows a document can belong to (mirrors the public ecosystem).
+export const DOCUMENT_WINDOWS = [
+  "Akanil",
+  "Atlas Mining",
+  "HYRION",
+  "ZYNTRA Deeptech",
+  "QASSAS",
+  "Amusnaw AI",
+  "Sustainability",
+  "General",
+] as const;
+
 export const REQUEST_STATUSES: RequestStatus[] = [
   "pending",
   "in_review",
@@ -122,7 +164,15 @@ export interface DocumentRecord {
   window: string | null;
   document_type: string | null;
   access_level: AccessLevel;
-  storage_path: string | null;
+  sensitivity_level: SensitivityLevel;
+  status: DocumentStatus;
+  owner: string | null;
+  review_date: string | null;
+  expiry_date: string | null;
+  approved_by: string | null;
+  related_entity: string | null;
+  tags: string[];
+  storage_path: string | null; // never exposed to clients
   language: string | null;
   version: string | null;
   is_active: boolean;
