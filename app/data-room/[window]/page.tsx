@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import {
   windowBySlug,
   getGrantedLevel,
-  listAccessibleDocuments,
+  listWindowDocuments,
 } from "@/lib/data-room";
 import { ACCESS_LEVELS } from "@/lib/supabase/types";
 import { ndaSatisfied } from "@/lib/auth/roles";
@@ -41,7 +41,7 @@ export default async function DataRoomWindowPage({
   }
 
   const grantedLevel = await getGrantedLevel(user.profileId, win.label);
-  const documents = await listAccessibleDocuments(win.label, user, grantedLevel);
+  const documents = await listWindowDocuments(win.label, user, grantedLevel);
 
   const grantedLabel = grantedLevel
     ? ACCESS_LEVELS.find((l) => l.value === grantedLevel)?.label
@@ -79,9 +79,13 @@ export default async function DataRoomWindowPage({
           </div>
         )}
 
-        <Eyebrow>Available documents</Eyebrow>
+        <Eyebrow>Documents</Eyebrow>
+        <p className="mt-2 text-sm text-atlas-grey">
+          Documents above your clearance are shown as locked. File locations are
+          never exposed.
+        </p>
         <div className="mt-6">
-          <DocumentList documents={documents} />
+          <DocumentList documents={documents} windowLabel={win.label} />
         </div>
 
         <p className="mt-8 text-sm">

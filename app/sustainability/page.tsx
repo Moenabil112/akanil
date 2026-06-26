@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, Eyebrow, CTAButton } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Sustainability — Fair Governance of Natural Resources",
@@ -80,15 +81,27 @@ const PILLARS = [
   },
 ];
 
-export default function SustainabilityPage() {
+export default async function SustainabilityPage() {
+  const hero = await getWindowHero("sustainabilityPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Sustainability & Local Impact"
-        title="Fair governance of natural resources, with visible developmental impact."
-        intro="Akanil treats sustainability as a development philosophy and impact framework — not a marketing claim. Quantified impact claims are made only where supported by metrics and evidence."
-        coreMessage="Sustainability is the fair governance of natural resources with visible developmental impact for people, land, water, energy, and local knowledge."
+        eyebrow={hero?.eyebrow || "Sustainability & Local Impact"}
+        title={
+          hero?.title ||
+          "Fair governance of natural resources, with visible developmental impact."
+        }
+        intro={
+          hero?.heroIntro ||
+          "Akanil treats sustainability as a development philosophy and impact framework — not a marketing claim. Quantified impact claims are made only where supported by metrics and evidence."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "Sustainability is the fair governance of natural resources with visible developmental impact for people, land, water, energy, and local knowledge."
+        }
         accent="emerald"
+        badge="Development Philosophy & Impact Framework"
       />
 
       <Section>

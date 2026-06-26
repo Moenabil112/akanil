@@ -150,7 +150,7 @@ create table if not exists documents (
   id            uuid primary key default gen_random_uuid(),
   title         text not null,
   description   text,
-  window        text,
+  "window"      text,                         -- "window" is a reserved keyword
   document_type text,
   access_level  access_level not null default 'institutional_brief',
   storage_path  text,                         -- never exposed to clients
@@ -187,7 +187,7 @@ create table if not exists nda_records (
 create table if not exists window_permissions (
   id           uuid primary key default gen_random_uuid(),
   profile_id   uuid references profiles(id) on delete cascade,
-  window       text not null,
+  "window"     text not null,                 -- "window" is a reserved keyword
   access_level access_level not null default 'institutional_brief',
   granted_by   uuid,
   granted_at   timestamptz not null default now(),

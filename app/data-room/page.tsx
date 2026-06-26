@@ -4,7 +4,8 @@ import { PageHeader, Section, Eyebrow } from "@/components/ui";
 import { RequestForm } from "@/components/request-form";
 import { TrustPathway } from "@/components/trust-pathway";
 import { getSessionUser } from "@/lib/auth/session";
-import { DATA_ROOM_WINDOWS } from "@/lib/data-room";
+import { getWindowAccessSummary } from "@/lib/data-room";
+import { WindowAccessCards } from "@/components/data-room/window-cards";
 import { ndaSatisfied } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ const LEVELS = [
 
 export default async function DataRoomPage() {
   const user = await getSessionUser();
+  const windows = user ? await getWindowAccessSummary(user) : [];
 
   return (
     <>
@@ -40,6 +42,7 @@ export default async function DataRoomPage() {
         title="Akanil Data Room Access"
         intro="Akanil uses controlled data room access to protect sensitive technical, legal, financial, and strategic information while allowing qualified institutional stakeholders to review the relevant evidence."
         accent="teal"
+        badge="Controlled Institutional Access Layer"
       />
 
       {/* Private panel — only for signed-in users. Anonymous visitors see the
@@ -58,19 +61,18 @@ export default async function DataRoomPage() {
           <p className="mt-4 max-w-2xl text-atlas-grey">
             Enter a window to review the documents available to you. Access is
             filtered by your granted level and every download is authorized and
-            logged.
+            logged. Locked windows can be requested.
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {DATA_ROOM_WINDOWS.map((w) => (
-              <Link
-                key={w.slug}
-                href={`/data-room/${w.slug}`}
-                className="rounded-xl border border-atlas-line bg-obsidian-800 p-5 transition-colors hover:border-teal/40"
-              >
-                <span className="text-sm font-medium text-ivory">{w.label}</span>
-                <span className="mt-2 block text-xs text-teal-light">Enter window →</span>
-              </Link>
-            ))}
+          <div className="mt-8">
+            <WindowAccessCards windows={windows} />
+          </div>
+          <div className="mt-6 flex flex-wrap gap-4 text-sm">
+            <Link href="/data-room/status" className="font-medium text-gold hover:underline">
+              View access status →
+            </Link>
+            <Link href="/data-room/access-control" className="font-medium text-gold hover:underline">
+              Request additional access →
+            </Link>
           </div>
         </Section>
       )}

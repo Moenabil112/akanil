@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader, Section, Eyebrow, CheckList, CTARow } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "ZYNTRA Deeptech — AI-Powered Mining Operations Intelligence",
@@ -38,15 +39,24 @@ const DEPLOYMENT = [
   "Continuous Optimization",
 ];
 
-export default function ZyntraPage() {
+export default async function ZyntraPage() {
+  const hero = await getWindowHero("zyntraPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Digital Window · ZYNTRA Deeptech"
-        title="ZYNTRA Deeptech — AI-Powered Mining Operations Intelligence"
-        intro="ZYNTRA helps mining sites and processing plants improve visibility over production, fuel, equipment, recovery indicators, cost per ton, and daily operating deviations."
-        coreMessage="ZYNTRA helps mining operations see what is happening, understand why it is happening, and make better operating decisions."
+        eyebrow={hero?.eyebrow || "Digital Window · ZYNTRA Deeptech"}
+        title={hero?.title || "ZYNTRA Deeptech — AI-Powered Mining Operations Intelligence"}
+        intro={
+          hero?.heroIntro ||
+          "ZYNTRA helps mining sites and processing plants improve visibility over production, fuel, equipment, recovery indicators, cost per ton, and daily operating deviations."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "ZYNTRA helps mining operations see what is happening, understand why it is happening, and make better operating decisions."
+        }
         accent="teal"
+        badge="AI Infrastructure & Automation Company"
       />
 
       {/* QASSAS product banner */}

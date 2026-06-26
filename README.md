@@ -86,6 +86,10 @@ Migrations live in `supabase/migrations/` and run in order:
   **private** `akanil-data-room` storage bucket (`public = false`).
 - `0003_auth_roles_nda.sql` — `admin_role` enum; `profiles` roles + auth link +
   NDA status; `organizations` NDA fields; `approved` NDA state.
+- `0004_governance_tables.sql` — governance-patch tables (sustainability
+  indicators, local impact, CRM, decision memos, content reviews).
+- `0005_rls_policies.sql` — SECURITY DEFINER helper functions + RLS policies
+  for all 16 tables, plus a self-role-escalation guard trigger.
 
 ```bash
 # with the Supabase CLI and a linked project
@@ -225,8 +229,24 @@ and `lib/site.ts`.
   NDA state model, authorized signed-URL download flow + access logging, admin
   access-control + download-log views, Sanity wiring (Insights + Akanil) with
   static fallback. Migration `0003`.
-- **Phase 3B+ — next:** end-user onboarding, RLS policies for authenticated
-  users, full Sanity wiring across all windows, production env wiring.
+- **Phase 3B — Onboarding, RLS, UX, full CMS** ✅ end-user journey
+  (`/data-room/status`, `/data-room/access-control`, `/auth/sign-out`), full RLS
+  policies (migrations `0004`/`0005`, validated against Postgres), locked-document
+  data room UX with access badges, admin document filters + quick approve,
+  Sanity wiring across all windows (static fallback), governance maturity badges.
+- **Phase 3C+ — next:** end-user signup/profile provisioning, production env
+  wiring, full CMS field rendering (beyond hero), data room analytics.
+
+### Row Level Security
+
+`0005` enables deny-by-default RLS on all 16 tables via SECURITY DEFINER helpers
+(`akanil_role_rank`, `akanil_current_profile`, `akanil_nda_approved`,
+`akanil_window_rank`): anon may only INSERT public-form rows; authenticated users
+see their own profile/org/NDA/permissions and only documents their window grant +
+NDA status allow; admins manage by role rank; logs are admin-read + service-write;
+a trigger blocks self role-escalation. The policy set was validated by applying
+all migrations to Postgres and simulating anon / NDA-approved / NDA-blocked /
+admin reads (see commit notes).
 - **Phase 4–5 — HYRION governance layer + protected QASSAS demo flow.**
 
 ---

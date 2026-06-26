@@ -71,18 +71,38 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
 
 /* ------------------------------- Page header ------------------------------ */
 
+export function MaturityBadge({
+  label,
+  accent = "gold",
+}: {
+  label: string;
+  accent?: AccentKey;
+}) {
+  const a = ACCENT_CLASS[accent];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${a.border} ${a.bg} ${a.text}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${a.dot}`} />
+      {label}
+    </span>
+  );
+}
+
 export function PageHeader({
   eyebrow,
   title,
   intro,
   coreMessage,
   accent = "gold",
+  badge,
 }: {
   eyebrow: string;
   title: string;
   intro?: string;
   coreMessage?: string;
   accent?: AccentKey;
+  badge?: string;
 }) {
   return (
     <header className="relative overflow-hidden border-b border-atlas-line bg-obsidian-900">
@@ -97,6 +117,11 @@ export function PageHeader({
         }}
       />
       <div className="container-content relative py-20 md:py-28">
+        {badge && (
+          <div className="mb-5">
+            <MaturityBadge label={badge} accent={accent} />
+          </div>
+        )}
         <Eyebrow>{eyebrow}</Eyebrow>
         <h1 className="heading-xl mt-5 max-w-4xl text-ivory">{title}</h1>
         {intro && <p className="body-lead mt-6 max-w-2xl">{intro}</p>}

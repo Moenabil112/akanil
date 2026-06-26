@@ -6,7 +6,9 @@ import {
   CheckList,
   CTARow,
   InfoCard,
+  MaturityBadge,
 } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Amusnaw AI — Moroccan Smart Mining Intelligence Infrastructure",
@@ -49,15 +51,27 @@ const MINERALS = [
   "Industrial Minerals",
 ];
 
-export default function AmusnawPage() {
+export default async function AmusnawPage() {
+  const hero = await getWindowHero("amusnawAiPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Digital Window · Amusnaw AI"
-        title="Amusnaw AI — Moroccan Smart Mining Intelligence Infrastructure"
-        intro="Amusnaw AI is designed to organize exploration data, strategic mineral knowledge, operating cases, mineral value references, and institutional decision layers within a Moroccan smart mining intelligence framework."
-        coreMessage="Amusnaw AI aims to transform mining and strategic minerals data into a Moroccan digital infrastructure for review, development, and institutional decision-making."
+        eyebrow={hero?.eyebrow || "Digital Window · Amusnaw AI"}
+        title={
+          hero?.title ||
+          "Amusnaw AI — Moroccan Smart Mining Intelligence Infrastructure"
+        }
+        intro={
+          hero?.heroIntro ||
+          "Amusnaw AI is designed to organize exploration data, strategic mineral knowledge, operating cases, mineral value references, and institutional decision layers within a Moroccan smart mining intelligence framework."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "Amusnaw AI aims to transform mining and strategic minerals data into a Moroccan digital infrastructure for review, development, and institutional decision-making."
+        }
         accent="emerald"
+        badge="Institutional Smart Mining Infrastructure Concept"
       />
 
       <Section>
@@ -81,11 +95,17 @@ export default function AmusnawPage() {
         <Eyebrow>Core Cases</Eyebrow>
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           <InfoCard title="Aguelmous" accent="emerald">
+            <div className="mb-3">
+              <MaturityBadge label="R&D Demonstrator" accent="emerald" />
+            </div>
             A smart exploration R&amp;D demonstrator linked to fault analysis,
             remote sensing, Pre-JORC preparation, and structured validation
             pathways.
           </InfoCard>
           <InfoCard title="Isseksi" accent="emerald">
+            <div className="mb-3">
+              <MaturityBadge label="Operating Case" accent="emerald" />
+            </div>
             A field-operating copper case connecting mining operations, data,
             evidence governance, and institutional review.
           </InfoCard>

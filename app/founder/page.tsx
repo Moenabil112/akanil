@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, Eyebrow, CheckList, CTAButton } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Mohamed Nabil — Mining Intelligence & Strategic Minerals Trust Architect",
@@ -18,13 +19,21 @@ const FOCUS = [
   "Institutional Investment Readiness",
 ];
 
-export default function FounderPage() {
+export default async function FounderPage() {
+  const hero = await getWindowHero("founderPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Founder"
-        title="Mohamed Nabil — Mining Intelligence & Strategic Minerals Trust Architect"
-        intro="Founder of Akanil and a project developer working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
+        eyebrow={hero?.eyebrow || "Founder"}
+        title={
+          hero?.title ||
+          "Mohamed Nabil — Mining Intelligence & Strategic Minerals Trust Architect"
+        }
+        intro={
+          hero?.heroIntro ||
+          "Founder of Akanil and a project developer working at the intersection of mining, artificial intelligence, governance, strategic minerals, and institutional investment readiness."
+        }
         accent="gold"
       />
 

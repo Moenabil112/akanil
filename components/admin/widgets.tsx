@@ -91,6 +91,40 @@ export function StatusSelect({
   );
 }
 
+/** One-click approve / decline backed by the status server action. */
+export function QuickStatus({
+  table,
+  id,
+  path,
+}: {
+  table: string;
+  id: string;
+  path: string;
+}) {
+  return (
+    <div className="flex gap-1.5">
+      {(["approved", "declined"] as const).map((s) => (
+        <form key={s} action={updateStatusAction}>
+          <input type="hidden" name="table" value={table} />
+          <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="path" value={path} />
+          <input type="hidden" name="status" value={s} />
+          <button
+            type="submit"
+            className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+              s === "approved"
+                ? "border-emerald/40 text-emerald-light hover:bg-emerald hover:text-ivory"
+                : "border-copper/40 text-copper-light hover:bg-copper hover:text-ivory"
+            }`}
+          >
+            {s === "approved" ? "Approve" : "Decline"}
+          </button>
+        </form>
+      ))}
+    </div>
+  );
+}
+
 export function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-xl border border-dashed border-atlas-line bg-obsidian-800/50 p-10 text-center text-sm text-atlas-grey">

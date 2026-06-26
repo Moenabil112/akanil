@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, Eyebrow, CheckList, CTARow } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "HYRION — Mining Evidence & Trust Governance Layer",
@@ -46,15 +47,24 @@ const ACCESS = [
   },
 ];
 
-export default function HyrionPage() {
+export default async function HyrionPage() {
+  const hero = await getWindowHero("hyrionPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Digital Window · HYRION"
-        title="HYRION — Mining Evidence & Trust Governance Layer"
-        intro="HYRION transforms fragmented mining files into structured, classified, and reviewable evidence for banks, funds, mining companies, legal advisors, technical reviewers, and institutional stakeholders."
-        coreMessage="HYRION transforms mineral information into structured evidence, and structured evidence into reviewable institutional decisions."
+        eyebrow={hero?.eyebrow || "Digital Window · HYRION"}
+        title={hero?.title || "HYRION — Mining Evidence & Trust Governance Layer"}
+        intro={
+          hero?.heroIntro ||
+          "HYRION transforms fragmented mining files into structured, classified, and reviewable evidence for banks, funds, mining companies, legal advisors, technical reviewers, and institutional stakeholders."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "HYRION transforms mineral information into structured evidence, and structured evidence into reviewable institutional decisions."
+        }
         accent="teal"
+        badge="Governance Layer"
       />
 
       <Section>

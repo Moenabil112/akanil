@@ -7,6 +7,7 @@ import {
   CTARow,
   InfoCard,
 } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Atlas Mining — Field Operating Proof Layer",
@@ -35,15 +36,24 @@ const EVIDENCE = [
   "Decision memos",
 ];
 
-export default function AtlasMiningPage() {
+export default async function AtlasMiningPage() {
+  const hero = await getWindowHero("atlasMiningPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="Digital Window · Atlas Mining"
-        title="Atlas Mining — Field Operating Proof Layer"
-        intro="Atlas Mining connects the Akanil trust architecture to real field-operating mining cases, with a focus on copper development, quarries, sampling, mobile processing concepts, and structured technical evidence in Morocco."
-        coreMessage="Atlas Mining connects land to data, data to evidence rooms, and evidence rooms to institutional decision-making."
+        eyebrow={hero?.eyebrow || "Digital Window · Atlas Mining"}
+        title={hero?.title || "Atlas Mining — Field Operating Proof Layer"}
+        intro={
+          hero?.heroIntro ||
+          "Atlas Mining connects the Akanil trust architecture to real field-operating mining cases, with a focus on copper development, quarries, sampling, mobile processing concepts, and structured technical evidence in Morocco."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "Atlas Mining connects land to data, data to evidence rooms, and evidence rooms to institutional decision-making."
+        }
         accent="copper"
+        badge="Field Operating Proof Layer"
       />
 
       <Section>

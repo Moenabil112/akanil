@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AdminShell, NotConfigured } from "@/components/admin/shell";
-import { Table, Th, Td, EmptyState, StatusSelect, formatDate } from "@/components/admin/widgets";
+import { Table, Th, Td, EmptyState, StatusSelect, QuickStatus, formatDate } from "@/components/admin/widgets";
 import { getAdminSession } from "@/lib/admin/session";
 import { getServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { ACCESS_LEVELS, type AccessRequest } from "@/lib/supabase/types";
@@ -75,7 +75,10 @@ export default async function AccessRequestsPage() {
                 </Td>
                 <Td>{r.nda_acknowledged ? "Acknowledged" : "—"}</Td>
                 <Td>
-                  <StatusSelect table="access_requests" id={r.id} status={r.status} path={PATH} />
+                  <div className="space-y-2">
+                    <StatusSelect table="access_requests" id={r.id} status={r.status} path={PATH} />
+                    <QuickStatus table="access_requests" id={r.id} path={PATH} />
+                  </div>
                 </Td>
               </tr>
             ))}

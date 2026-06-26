@@ -8,6 +8,7 @@ import {
   CTARow,
   InfoCard,
 } from "@/components/ui";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "QASSAS — A ZYNTRA Product for Mining Exploration & Operating Intelligence",
@@ -37,14 +38,23 @@ const OS_VIEWS = [
   "Exploration Portfolio View",
 ];
 
-export default function QassasPage() {
+export default async function QassasPage() {
+  const hero = await getWindowHero("qassasPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="ZYNTRA Product · QASSAS"
-        title="QASSAS — A ZYNTRA Product for Mining Exploration & Operating Intelligence"
-        intro="QASSAS is an active mining intelligence product managed by ZYNTRA Deeptech. It includes a user interface and seven local AI models designed to support exploration, license management, geological knowledge organization, and operating intelligence."
+        eyebrow={hero?.eyebrow || "ZYNTRA Product · QASSAS"}
+        title={
+          hero?.title ||
+          "QASSAS — A ZYNTRA Product for Mining Exploration & Operating Intelligence"
+        }
+        intro={
+          hero?.heroIntro ||
+          "QASSAS is an active mining intelligence product managed by ZYNTRA Deeptech. It includes a user interface and seven local AI models designed to support exploration, license management, geological knowledge organization, and operating intelligence."
+        }
         accent="teal"
+        badge="Active Product"
       />
 
       <div className="border-b border-atlas-line bg-obsidian-900">

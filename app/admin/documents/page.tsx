@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminShell, NotConfigured } from "@/components/admin/shell";
 import { Table, Th, Td, EmptyState, formatDate } from "@/components/admin/widgets";
-import { getAdminSession } from "@/lib/admin/session";
 import { getServiceClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import {
   ACCESS_LEVELS,
   SENSITIVITY_LEVELS,
+  DOCUMENT_STATUSES,
+  DOCUMENT_WINDOWS,
   type DocumentRecord,
 } from "@/lib/supabase/types";
 
@@ -18,30 +19,50 @@ export const metadata: Metadata = {
 
 const PATH = "/admin/documents";
 
-export default async function DocumentsPage() {
-  const session = await getAdminSession();
+interface Filters {
+  window?: string;
+  document_type?: string;
+  sensitivity_level?: string;
+  access_level?: string;
+  status?: string;
+  language?: string;
+}
 
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Filters;
+}) {
   if (!isSupabaseConfigured()) {
     return (
-      <AdminShell title="Documents" active={PATH} email={session?.email}>
+      <AdminShell title="Documents" active={PATH}>
         <NotConfigured what="Document metadata management" />
       </AdminShell>
     );
   }
 
-  const { data } = await getServiceClient()
+  let query = getServiceClient()
     .from("documents")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(300);
 
+  // Apply filters from the query string.
+  for (const key of ["window", "sensitivity_level", "access_level", "status", "language"] as const) {
+    if (searchParams[key]) query = query.eq(key, searchParams[key]!);
+  }
+  if (searchParams.document_type) {
+    query = query.ilike("document_type", `%${searchParams.document_type}%`);
+  }
+
+  const { data } = await query;
   const rows = (data ?? []) as DocumentRecord[];
   const counts = Object.fromEntries(
     ACCESS_LEVELS.map((l) => [l.value, rows.filter((d) => d.access_level === l.value).length])
   );
 
   return (
-    <AdminShell title="Documents" active={PATH} email={session?.email}>
+    <AdminShell title="Documents" active={PATH}>
       {/* Data Room layer structure (step 4) — files stay gated. */}
       <section className="mb-8">
         <h2 className="heading-md mb-3 text-ivory">Data Room layers</h2>
@@ -65,6 +86,27 @@ export default async function DocumentsPage() {
         only — storage paths are never exposed and no download links are issued.
         Authenticated, NDA-checked, signed-URL delivery arrives in Phase 3.
       </div>
+
+      {/* Filter bar (GET form → searchParams) */}
+      <form method="get" className="mb-5 grid gap-3 rounded-xl border border-atlas-line bg-obsidian-800 p-4 sm:grid-cols-3 lg:grid-cols-6">
+        <FilterSelect name="window" label="Window" value={searchParams.window}
+          options={DOCUMENT_WINDOWS.map((w) => ({ value: w, label: w }))} />
+        <FilterText name="document_type" label="Type" value={searchParams.document_type} />
+        <FilterSelect name="sensitivity_level" label="Sensitivity" value={searchParams.sensitivity_level}
+          options={SENSITIVITY_LEVELS} />
+        <FilterSelect name="access_level" label="Access level" value={searchParams.access_level}
+          options={ACCESS_LEVELS} />
+        <FilterSelect name="status" label="Status" value={searchParams.status} options={DOCUMENT_STATUSES} />
+        <FilterText name="language" label="Language" value={searchParams.language} />
+        <div className="flex items-end gap-2 sm:col-span-3 lg:col-span-6">
+          <button type="submit" className="rounded-md bg-gold px-4 py-2 text-sm font-semibold text-obsidian hover:bg-gold-light">
+            Apply filters
+          </button>
+          <Link href={PATH} className="rounded-md border border-atlas-line px-4 py-2 text-sm text-ivory-muted hover:border-gold/40 hover:text-gold">
+            Reset
+          </Link>
+        </div>
+      </form>
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="heading-md text-ivory">Document index</h2>
@@ -129,5 +171,47 @@ export default async function DocumentsPage() {
         </Table>
       )}
     </AdminShell>
+  );
+}
+
+function FilterSelect({
+  name,
+  label,
+  value,
+  options,
+}: {
+  name: string;
+  label: string;
+  value?: string;
+  options: readonly { value: string; label: string }[];
+}) {
+  return (
+    <label className="text-xs text-atlas-grey">
+      {label}
+      <select
+        name={name}
+        defaultValue={value ?? ""}
+        className="mt-1 w-full rounded-md border border-atlas-line bg-obsidian-900 px-2.5 py-1.5 text-sm text-ivory outline-none focus:border-gold/60"
+      >
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function FilterText({ name, label, value }: { name: string; label: string; value?: string }) {
+  return (
+    <label className="text-xs text-atlas-grey">
+      {label}
+      <input
+        name={name}
+        defaultValue={value ?? ""}
+        placeholder="Any"
+        className="mt-1 w-full rounded-md border border-atlas-line bg-obsidian-900 px-2.5 py-1.5 text-sm text-ivory placeholder-atlas-grey/50 outline-none focus:border-gold/60"
+      />
+    </label>
   );
 }
