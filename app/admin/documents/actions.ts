@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ADMIN_COOKIE, verifySession } from "@/lib/admin/auth";
+import { getSessionUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import {
   getServiceClient,
   isSupabaseConfigured,
@@ -65,8 +65,9 @@ async function uploadFile(file: File): Promise<string> {
 }
 
 export async function createDocumentAction(formData: FormData) {
-  const session = await verifySession(cookies().get(ADMIN_COOKIE)?.value);
+  const session = await getSessionUser();
   if (!session) redirect("/admin/login");
+  if (!can.manageDocuments(session.role)) redirect("/admin/documents");
   if (!isSupabaseConfigured()) redirect("/admin/documents");
 
   const meta = readMetadata(formData);
@@ -101,8 +102,9 @@ export async function createDocumentAction(formData: FormData) {
 }
 
 export async function updateDocumentAction(formData: FormData) {
-  const session = await verifySession(cookies().get(ADMIN_COOKIE)?.value);
+  const session = await getSessionUser();
   if (!session) redirect("/admin/login");
+  if (!can.manageDocuments(session.role)) redirect("/admin/documents");
   if (!isSupabaseConfigured()) redirect("/admin/documents");
 
   const id = String(formData.get("id") || "");

@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader, Section, Eyebrow } from "@/components/ui";
 import { RequestForm } from "@/components/request-form";
 import { TrustPathway } from "@/components/trust-pathway";
+import { getSessionUser } from "@/lib/auth/session";
+import { DATA_ROOM_WINDOWS } from "@/lib/data-room";
+import { ndaSatisfied } from "@/lib/auth/roles";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Akanil Data Room Access",
@@ -24,7 +30,9 @@ const LEVELS = [
   },
 ];
 
-export default function DataRoomPage() {
+export default async function DataRoomPage() {
+  const user = await getSessionUser();
+
   return (
     <>
       <PageHeader
@@ -33,6 +41,39 @@ export default function DataRoomPage() {
         intro="Akanil uses controlled data room access to protect sensitive technical, legal, financial, and strategic information while allowing qualified institutional stakeholders to review the relevant evidence."
         accent="teal"
       />
+
+      {/* Private panel — only for signed-in users. Anonymous visitors see the
+          public request flow below as the static fallback. */}
+      {user && (
+        <Section className="border-b border-atlas-line bg-obsidian-900">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Eyebrow>Your Data Room</Eyebrow>
+            <span className="text-sm text-atlas-grey">
+              {user.email} · NDA:{" "}
+              <span className={ndaSatisfied(user.ndaStatus) ? "text-emerald-light" : "text-gold"}>
+                {user.ndaStatus ?? "pending"}
+              </span>
+            </span>
+          </div>
+          <p className="mt-4 max-w-2xl text-atlas-grey">
+            Enter a window to review the documents available to you. Access is
+            filtered by your granted level and every download is authorized and
+            logged.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {DATA_ROOM_WINDOWS.map((w) => (
+              <Link
+                key={w.slug}
+                href={`/data-room/${w.slug}`}
+                className="rounded-xl border border-atlas-line bg-obsidian-800 p-5 transition-colors hover:border-teal/40"
+              >
+                <span className="text-sm font-medium text-ivory">{w.label}</span>
+                <span className="mt-2 block text-xs text-teal-light">Enter window →</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section>
         <Eyebrow>Access Levels</Eyebrow>

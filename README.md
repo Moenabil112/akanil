@@ -84,6 +84,8 @@ Migrations live in `supabase/migrations/` and run in order:
 - `0002_documents_metadata.sql` — extended document metadata (sensitivity,
   status, owner, review/expiry dates, approver, related entity, tags) and the
   **private** `akanil-data-room` storage bucket (`public = false`).
+- `0003_auth_roles_nda.sql` — `admin_role` enum; `profiles` roles + auth link +
+  NDA status; `organizations` NDA fields; `approved` NDA state.
 
 ```bash
 # with the Supabase CLI and a linked project
@@ -114,6 +116,39 @@ language, version, status, owner, review/expiry dates, approver, related entity,
 tags. Files upload to the private storage bucket server-side; the raw
 `storage_path` is never rendered (only "attached / none"), and no download URL is
 issued — the Data Room stays metadata-only until Phase 3 signed-URL delivery.
+
+## Controlled access (Phase 3A)
+
+**Authentication.** Supabase Auth (`@supabase/ssr`, cookie sessions) at
+`/auth/sign-in` + sign-out. With no live Supabase, the **HMAC admin gate**
+(`/admin/login`) remains as a development fallback that grants a `super_admin`
+session, so the console stays testable. `getSessionUser()` unifies both into one
+`{ email, role, ndaStatus, … }` shape.
+
+**Admin roles** (`admin_role`, ranked): Super Admin > Platform Admin > Data Room
+Manager > Content Manager > Reviewer > Viewer. Capabilities (`lib/auth/roles.ts`):
+review requests → Reviewer+, content → Content Manager+, documents/NDA/access
+assignment → Data Room Manager+, role assignment → Platform Admin+. Server
+actions and the admin nav both enforce these; Viewer is read-only.
+
+**Data Room protection.** `/data-room` stays public (request page = static
+fallback) and shows a private window panel to signed-in users. `/data-room/[window]`
+is gated: anonymous → sign-in prompt; authenticated → document list filtered to
+the user's granted access level. Listings expose **no storage paths** — only a
+`hasFile` flag.
+
+**NDA model.** `nda_status`: pending → sent → signed → **approved** (+ expired/
+revoked). Tracked on `profiles` and `organizations`; admins update it in Access
+Control. Access to NDA-level and higher documents requires `approved`.
+
+**Signed-URL delivery** (`POST /api/data-room/download`): verifies session →
+window permission (rank ≥ document level, admin roles bypass) → NDA (when the
+level requires it) → only then issues a short-lived `createSignedUrl`, and writes
+a `document_access_logs` row. Returns 401/403 on denial, 503 when storage isn't
+configured. Raw paths are never returned.
+
+**Admin additions:** Access Control (roles, NDA status, window-access grants) and
+Download Log views.
 
 ## Content (Sanity CMS)
 
@@ -185,9 +220,13 @@ and `lib/site.ts`.
 - **Phase 2B — CMS + Documents** ✅ Sanity schemas for all public windows +
   Insights (in `sanity/`); admin document upload + full metadata editing
   (files gated, paths never exposed); migration `0002` + private storage bucket.
-- **Phase 3 — Controlled Data Room:** Supabase Auth, NDA workflow, window
-  permissions, signed-URL file delivery, download audit logging; wire pages to
-  Sanity content.
+- **Phase 3A — Controlled access foundation** ✅ Supabase Auth (dev mode) with
+  HMAC dev fallback, 6 ranked admin roles, protected `/data-room/[window]`,
+  NDA state model, authorized signed-URL download flow + access logging, admin
+  access-control + download-log views, Sanity wiring (Insights + Akanil) with
+  static fallback. Migration `0003`.
+- **Phase 3B+ — next:** end-user onboarding, RLS policies for authenticated
+  users, full Sanity wiring across all windows, production env wiring.
 - **Phase 4–5 — HYRION governance layer + protected QASSAS demo flow.**
 
 ---

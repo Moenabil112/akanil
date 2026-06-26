@@ -3,17 +3,14 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import {
-  ADMIN_COOKIE,
-  checkCredentials,
-  createSession,
-  verifySession,
-} from "@/lib/admin/auth";
+import { ADMIN_COOKIE, checkCredentials, createSession } from "@/lib/admin/auth";
 import {
   getServiceClient,
   isSupabaseConfigured,
   writeAuditLog,
 } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import type { RequestStatus } from "@/lib/supabase/types";
 
 const STATUS_TABLES = new Set([
@@ -64,8 +61,9 @@ export async function logoutAction() {
 }
 
 export async function updateStatusAction(formData: FormData) {
-  const session = await verifySession(cookies().get(ADMIN_COOKIE)?.value);
-  if (!session) redirect("/admin/login");
+  const user = await getSessionUser();
+  if (!user) redirect("/admin/login");
+  if (!can.reviewRequests(user.role)) return; // viewer is read-only
 
   const table = String(formData.get("table") || "");
   const id = String(formData.get("id") || "");
@@ -90,7 +88,7 @@ export async function updateStatusAction(formData: FormData) {
   }
 
   await writeAuditLog({
-    actor: session.email,
+    actor: user.email,
     action_type: "status_update",
     target_type: table,
     target_id: id,

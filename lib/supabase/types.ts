@@ -17,7 +17,39 @@ export type RequestStatus =
   | "declined"
   | "closed";
 
-export type NdaStatus = "pending" | "sent" | "signed" | "expired" | "revoked";
+export type NdaStatus =
+  | "pending"
+  | "sent"
+  | "signed"
+  | "approved"
+  | "expired"
+  | "revoked";
+
+export const NDA_STATUSES: { value: NdaStatus; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "sent", label: "Sent" },
+  { value: "signed", label: "Signed" },
+  { value: "approved", label: "Approved" },
+  { value: "expired", label: "Expired" },
+  { value: "revoked", label: "Revoked" },
+];
+
+export type AdminRole =
+  | "super_admin"
+  | "platform_admin"
+  | "data_room_manager"
+  | "content_manager"
+  | "reviewer"
+  | "viewer";
+
+export const ADMIN_ROLES: { value: AdminRole; label: string }[] = [
+  { value: "super_admin", label: "Super Admin" },
+  { value: "platform_admin", label: "Platform Admin" },
+  { value: "data_room_manager", label: "Data Room Manager" },
+  { value: "content_manager", label: "Content Manager" },
+  { value: "reviewer", label: "Reviewer" },
+  { value: "viewer", label: "Viewer" },
+];
 
 export type SensitivityLevel =
   | "public"
@@ -153,8 +185,45 @@ export interface Organization {
   country: string | null;
   website: string | null;
   notes: string | null;
+  nda_status: NdaStatus;
+  nda_required: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  auth_user_id: string | null;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  admin_role: AdminRole | null;
+  nda_status: NdaStatus;
+  country: string | null;
+  organization_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WindowPermission {
+  id: string;
+  profile_id: string;
+  window: string;
+  access_level: AccessLevel;
+  granted_by: string | null;
+  granted_at: string;
+  expires_at: string | null;
+}
+
+export interface DocumentAccessLog {
+  id: string;
+  document_id: string;
+  user_id: string | null;
+  organization_id: string | null;
+  accessed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 export interface DocumentRecord {

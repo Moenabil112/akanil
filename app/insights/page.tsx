@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, Eyebrow, CTAButton } from "@/components/ui";
+import { getInsights } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Insights — Mining Intelligence & Governance Perspectives",
   description:
-    "Insights from Akanil on strategic minerals, mining intelligence, evidence governance, and institutional readiness. CMS-backed publishing arrives in Phase 2.",
+    "Insights from Akanil on strategic minerals, mining intelligence, evidence governance, and institutional readiness.",
 };
 
-// Placeholder editorial topics. In Phase 2 these become CMS (Sanity) entries.
+// Static fallback used when the Sanity CMS is not configured or has no entries.
 const TOPICS = [
   {
     tag: "Governance",
@@ -35,7 +36,18 @@ const TOPICS = [
   },
 ];
 
-export default function InsightsPage() {
+export default async function InsightsPage() {
+  // CMS-backed when configured; static topics otherwise. Never breaks the page.
+  const cms = await getInsights();
+  const topics =
+    cms && cms.length > 0
+      ? cms.map((i) => ({
+          tag: i.tag ?? "Insight",
+          title: i.title,
+          excerpt: i.excerpt ?? "",
+        }))
+      : TOPICS;
+
   return (
     <>
       <PageHeader
@@ -47,7 +59,7 @@ export default function InsightsPage() {
 
       <Section>
         <div className="grid gap-5 md:grid-cols-2">
-          {TOPICS.map((t) => (
+          {topics.map((t) => (
             <article
               key={t.title}
               className="group flex flex-col rounded-xl border border-atlas-line bg-obsidian-800 p-7 transition-colors hover:border-gold/30"

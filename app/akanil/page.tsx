@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader, Section, Eyebrow, CheckList, CTAButton } from "@/components/ui";
 import { TrustPathway } from "@/components/trust-pathway";
+import { getWindowHero } from "@/lib/sanity/queries";
 
 export const metadata: Metadata = {
   title: "Akanil — Strategic Minerals & Trust Architecture House",
@@ -19,14 +20,23 @@ const ORGANIZES = [
   "Strategic partnerships",
 ];
 
-export default function AkanilPage() {
+export default async function AkanilPage() {
+  // Hero is CMS-overridable; static copy is the fallback (CMS off or empty).
+  const hero = await getWindowHero("akanilPage");
+
   return (
     <>
       <PageHeader
-        eyebrow="The Parent Window"
-        title="Akanil — Strategic Minerals & Trust Architecture House"
-        intro="Akanil builds the digital and institutional trust layers required to transform mineral opportunities into structured, reviewable, and institutionally readable cases."
-        coreMessage="From Earth to Trust. From Mineral Data to Institutional Decision."
+        eyebrow={hero?.eyebrow || "The Parent Window"}
+        title={hero?.title || "Akanil — Strategic Minerals & Trust Architecture House"}
+        intro={
+          hero?.heroIntro ||
+          "Akanil builds the digital and institutional trust layers required to transform mineral opportunities into structured, reviewable, and institutionally readable cases."
+        }
+        coreMessage={
+          hero?.coreMessage ||
+          "From Earth to Trust. From Mineral Data to Institutional Decision."
+        }
         accent="gold"
       />
 
