@@ -117,7 +117,7 @@ export const NAV: NavItem[] = [
   { label: "ZYNTRA", href: "/zyntra" },
   { label: "QASSAS", href: "/zyntra/qassas" },
   { label: "HYRION", href: "/hyrion" },
-  { label: "Atlas Golden Mining", href: "/atlas-mining" },
+  { label: "ATLAS GM", href: "/atlas-mining" }, // nav-only short label; page title stays "ATLAS Golden Mining"
   { label: "Mustadam", href: "/sustainability" },
   { label: "Data Room", href: "/data-room" },
   { label: "Founder", href: "/founder" },
