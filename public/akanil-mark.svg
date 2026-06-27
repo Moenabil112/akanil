@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="Akanil">
+  <!--
+    INTERIM Akanil mark — hand-traced reproduction of the official gold
+    lotus-and-waves emblem (central spearhead, faceted lotus, three-tier water
+    lines). NOT the approved vector; proportions are approximate. Replace with
+    the official asset and update components/logo.tsx (OFFICIAL_MARK_SRC).
+  -->
+  <g stroke="#B8924A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 8 L78 40 L64 58 L50 40 Z" />
+    <path d="M56 52 L64 98 L72 52" />
+    <path d="M50 62 L42 90 L60 98" />
+    <path d="M78 62 L86 90 L68 98" />
+    <path d="M40 90 L64 106 L88 90" opacity="0.9" />
+    <path d="M52 96 L64 104 L76 96" opacity="0.7" />
+    <path d="M20 34 C34 27 46 32 55 33" opacity="0.95" />
+    <path d="M14 52 C30 44 44 50 53 49" opacity="0.7" />
+    <path d="M20 66 C34 60 46 64 53 63" opacity="0.5" />
+    <path d="M108 34 C94 27 82 32 73 33" opacity="0.95" />
+    <path d="M114 52 C98 44 84 50 75 49" opacity="0.7" />
+    <path d="M108 66 C94 60 82 64 75 63" opacity="0.5" />
+  </g>
+</svg>
