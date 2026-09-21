@@ -1,0 +1,15 @@
+{
+  "name": "@qassas/temporal",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@temporalio/workflow": "^1.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}
