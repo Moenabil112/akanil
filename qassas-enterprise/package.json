@@ -10,7 +10,9 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:seed:abu-salal": "node scripts/seed-abu-salal.mjs"
   },
   "engines": {
     "node": ">=22"
