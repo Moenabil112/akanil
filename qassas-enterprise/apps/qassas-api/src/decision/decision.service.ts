@@ -1,0 +1,638 @@
+import { createHash, randomUUID } from "node:crypto";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import type { PoolClient } from "pg";
+import { AuditEventWriter } from "../audit/audit-event.writer";
+import { OpaPolicyService } from "../auth/opa-policy.service";
+import type { AuthenticatedActor } from "../auth/auth.types";
+import { DatabaseService } from "../database/database.service";
+
+export interface OpenDecisionCommand {
+  target_id: string;
+  decision_class: string;
+  decision_question: string;
+  trigger_type: string;
+  current_gate: string;
+}
+
+interface DecisionContextRow {
+  decision_id: string;
+  target_id: string;
+  decision_class: string;
+  decision_question: string;
+  current_gate: string;
+  trigger_type: string;
+  state: string;
+  decision_version: string;
+  object_version: string;
+  evidence_snapshot_id: string | null;
+  final_decision: string | null;
+  final_rationale: string | null;
+  created_by_user_id: string | null;
+  enterprise_id: string;
+  asset_id: string | null;
+  security_class: string;
+}
+
+interface TargetScopeRow {
+  target_id: string;
+  enterprise_id: string;
+  asset_id: string | null;
+  current_gate: string;
+  security_class: string;
+}
+
+interface IdempotencyRow {
+  request_hash: string;
+  result_payload: Record<string, unknown>;
+}
+
+interface ReviewRow {
+  review_id: string;
+  required_role: string;
+}
+
+@Injectable()
+export class DecisionService {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly policy: OpaPolicyService,
+    private readonly events: AuditEventWriter,
+  ) {}
+
+  async getDecision(decisionId: string, actor: AuthenticatedActor) {
+    const context = await this.loadContext(decisionId);
+    if (!context?.asset_id) {
+      throw new NotFoundException();
+    }
+
+    const access = await this.policy.canReadTarget(actor, {
+      targetId: context.target_id,
+      assetId: context.asset_id,
+      securityClass: context.security_class,
+    });
+    if (!access.allow) {
+      throw new NotFoundException();
+    }
+
+    return this.toView(context);
+  }
+
+  async openDecision(
+    actor: AuthenticatedActor,
+    command: OpenDecisionCommand,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    this.requireFields(command);
+
+    const target = await this.database.query<TargetScopeRow>(
+      `SELECT target_id, enterprise_id, asset_id, current_gate, security_class
+         FROM qassas_core.target
+        WHERE target_id = $1
+        LIMIT 1`,
+      [command.target_id],
+    );
+    const scope = target.rows[0];
+    if (!scope?.asset_id) {
+      throw new NotFoundException();
+    }
+
+    const authz = await this.policy.canActOnDecision(actor, "open", {
+      targetId: scope.target_id,
+      assetId: scope.asset_id,
+      decisionClass: command.decision_class,
+      createdByUserId: actor.userId,
+    });
+    if (!authz.allow) {
+      await this.recordDenied(
+        actor,
+        scope.enterprise_id,
+        "Target",
+        scope.target_id,
+        1,
+        correlationId,
+        authz.reason,
+        "open_decision",
+      );
+      throw new ForbiddenException({ code: "QAS-AUTH-DENIED" });
+    }
+
+    const requestHash = this.hash(command);
+    return this.database.transaction(async (client) => {
+      const existing = await this.idempotentResult(
+        client,
+        actor.userId,
+        "OpenDecision",
+        idempotencyKey,
+        requestHash,
+      );
+      if (existing) return existing;
+
+      const decisionId = `DEC-${randomUUID()}`;
+      await client.query(
+        `INSERT INTO qassas_core.decision_object (
+           decision_id, target_id, decision_class, decision_question,
+           current_gate, trigger_type, state, created_by_user_id
+         ) VALUES ($1,$2,$3,$4,$5,$6,'CREATED',$7)`,
+        [
+          decisionId,
+          command.target_id,
+          command.decision_class,
+          command.decision_question,
+          command.current_gate,
+          command.trigger_type,
+          actor.userId,
+        ],
+      );
+
+      await this.events.write(client, {
+        eventType: "DecisionOpened",
+        objectType: "DecisionObject",
+        objectId: decisionId,
+        objectVersion: 1,
+        actorId: actor.userId,
+        actorRole: this.actorRole(actor),
+        tenantId: scope.enterprise_id,
+        correlationId,
+        previousState: null,
+        newState: "CREATED",
+        payload: {
+          target_id: command.target_id,
+          decision_class: command.decision_class,
+          decision_question: command.decision_question,
+          trigger_type: command.trigger_type,
+          current_gate: command.current_gate,
+        },
+      });
+
+      const result = {
+        decision_id: decisionId,
+        target_id: command.target_id,
+        decision_class: command.decision_class,
+        decision_question: command.decision_question,
+        current_gate: command.current_gate,
+        trigger_type: command.trigger_type,
+        state: "CREATED",
+        decision_version: 1,
+        object_version: 1,
+        created_by_user_id: actor.userId,
+      };
+
+      await this.storeIdempotency(
+        client,
+        actor.userId,
+        "OpenDecision",
+        idempotencyKey,
+        requestHash,
+        result,
+      );
+
+      return result;
+    });
+  }
+
+  async requestHumanReview(
+    decisionId: string,
+    actor: AuthenticatedActor,
+    expectedVersion: number,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    const context = await this.requireDecisionContext(decisionId);
+    await this.authorizeDecisionAction(
+      actor,
+      "request_review",
+      context,
+      correlationId,
+    );
+
+    const requestHash = this.hash({ decisionId, expectedVersion });
+    return this.database.transaction(async (client) => {
+      const existing = await this.idempotentResult(
+        client,
+        actor.userId,
+        "RequestHumanReview",
+        idempotencyKey,
+        requestHash,
+      );
+      if (existing) return existing;
+
+      const current = await this.lockContext(client, decisionId);
+      this.ensureVersion(current, expectedVersion);
+      if (!["CREATED", "DECISION_READY"].includes(current.state)) {
+        throw new ConflictException({ code: "QAS-INVALID-STATE-TRANSITION" });
+      }
+
+      const reviewId = `REV-${randomUUID()}`;
+      await client.query(
+        `INSERT INTO qassas_core.human_review (
+           review_id, decision_id, required_role, review_status
+         ) VALUES ($1,$2,'EXPLORATION_DIRECTOR','PENDING')`,
+        [reviewId, decisionId],
+      );
+
+      const nextVersion = Number(current.object_version) + 1;
+      await client.query(
+        `UPDATE qassas_core.decision_object
+            SET state = 'HUMAN_REVIEW_REQUIRED',
+                object_version = $2,
+                updated_at = now()
+          WHERE decision_id = $1`,
+        [decisionId, nextVersion],
+      );
+
+      await this.events.write(client, {
+        eventType: "HumanReviewRequested",
+        objectType: "DecisionObject",
+        objectId: decisionId,
+        objectVersion: nextVersion,
+        actorId: actor.userId,
+        actorRole: this.actorRole(actor),
+        tenantId: current.enterprise_id,
+        correlationId,
+        previousState: current.state,
+        newState: "HUMAN_REVIEW_REQUIRED",
+        payload: { review_id: reviewId, required_role: "EXPLORATION_DIRECTOR" },
+      });
+
+      const result = {
+        decision_id: decisionId,
+        review_id: reviewId,
+        state: "HUMAN_REVIEW_REQUIRED",
+        object_version: nextVersion,
+      };
+      await this.storeIdempotency(
+        client,
+        actor.userId,
+        "RequestHumanReview",
+        idempotencyKey,
+        requestHash,
+        result,
+      );
+      return result;
+    });
+  }
+
+  approveDecision(
+    decisionId: string,
+    actor: AuthenticatedActor,
+    expectedVersion: number,
+    rationale: string,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    return this.finaliseDecision(
+      "approve",
+      decisionId,
+      actor,
+      expectedVersion,
+      rationale,
+      idempotencyKey,
+      correlationId,
+    );
+  }
+
+  rejectDecision(
+    decisionId: string,
+    actor: AuthenticatedActor,
+    expectedVersion: number,
+    rationale: string,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    return this.finaliseDecision(
+      "reject",
+      decisionId,
+      actor,
+      expectedVersion,
+      rationale,
+      idempotencyKey,
+      correlationId,
+    );
+  }
+
+  private async finaliseDecision(
+    action: "approve" | "reject",
+    decisionId: string,
+    actor: AuthenticatedActor,
+    expectedVersion: number,
+    rationale: string,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    if (!rationale?.trim()) {
+      throw new BadRequestException("Rationale is required");
+    }
+
+    const context = await this.requireDecisionContext(decisionId);
+    await this.authorizeDecisionAction(actor, action, context, correlationId);
+
+    const commandType = action === "approve" ? "ApproveDecision" : "RejectDecision";
+    const finalState = action === "approve" ? "APPROVED" : "REJECTED";
+    const eventType = action === "approve" ? "DecisionApproved" : "DecisionRejected";
+    const requestHash = this.hash({ decisionId, expectedVersion, rationale });
+
+    return this.database.transaction(async (client) => {
+      const existing = await this.idempotentResult(
+        client,
+        actor.userId,
+        commandType,
+        idempotencyKey,
+        requestHash,
+      );
+      if (existing) return existing;
+
+      const current = await this.lockContext(client, decisionId);
+      this.ensureVersion(current, expectedVersion);
+      if (current.state !== "HUMAN_REVIEW_REQUIRED") {
+        throw new ConflictException({ code: "QAS-INVALID-STATE-TRANSITION" });
+      }
+
+      const review = await client.query<ReviewRow>(
+        `SELECT review_id, required_role
+           FROM qassas_core.human_review
+          WHERE decision_id = $1
+            AND review_status = 'PENDING'
+          ORDER BY started_at DESC
+          LIMIT 1
+          FOR UPDATE`,
+        [decisionId],
+      );
+      const pending = review.rows[0];
+      if (!pending) {
+        throw new ConflictException({ code: "QAS-HUMAN-REVIEW-NOT-PENDING" });
+      }
+
+      const reviewerRole = actor.roleAssignments.find(
+        (role) =>
+          role.roleType === pending.required_role &&
+          role.assetScope.includes(current.asset_id ?? "") &&
+          role.decisionClassScope.includes(current.decision_class),
+      );
+      if (!reviewerRole) {
+        throw new ForbiddenException({ code: "QAS-AUTHORITY-INSUFFICIENT" });
+      }
+
+      await client.query(
+        `UPDATE qassas_core.human_review
+            SET reviewer_user_id = $2,
+                reviewer_role_assignment_id = $3,
+                review_status = 'COMPLETED',
+                review_decision = $4,
+                rationale = $5,
+                completed_at = now(),
+                object_version = object_version + 1
+          WHERE review_id = $1`,
+        [
+          pending.review_id,
+          actor.userId,
+          reviewerRole.roleAssignmentId,
+          finalState,
+          rationale,
+        ],
+      );
+
+      const nextVersion = Number(current.object_version) + 1;
+      await client.query(
+        `UPDATE qassas_core.decision_object
+            SET state = $2,
+                final_decision = $2,
+                final_rationale = $3,
+                object_version = $4,
+                updated_at = now()
+          WHERE decision_id = $1`,
+        [decisionId, finalState, rationale, nextVersion],
+      );
+
+      await this.events.write(client, {
+        eventType,
+        objectType: "DecisionObject",
+        objectId: decisionId,
+        objectVersion: nextVersion,
+        actorId: actor.userId,
+        actorRole: reviewerRole.roleType,
+        tenantId: current.enterprise_id,
+        correlationId,
+        previousState: current.state,
+        newState: finalState,
+        payload: {
+          review_id: pending.review_id,
+          rationale,
+        },
+      });
+
+      const result = {
+        decision_id: decisionId,
+        review_id: pending.review_id,
+        state: finalState,
+        final_decision: finalState,
+        final_rationale: rationale,
+        object_version: nextVersion,
+      };
+      await this.storeIdempotency(
+        client,
+        actor.userId,
+        commandType,
+        idempotencyKey,
+        requestHash,
+        result,
+      );
+      return result;
+    });
+  }
+
+  private async authorizeDecisionAction(
+    actor: AuthenticatedActor,
+    action: "request_review" | "approve" | "reject",
+    context: DecisionContextRow,
+    correlationId: string,
+  ) {
+    if (!context.asset_id) {
+      throw new NotFoundException();
+    }
+
+    const authz = await this.policy.canActOnDecision(actor, action, {
+      decisionId: context.decision_id,
+      targetId: context.target_id,
+      assetId: context.asset_id,
+      decisionClass: context.decision_class,
+      createdByUserId: context.created_by_user_id,
+    });
+
+    if (!authz.allow) {
+      await this.recordDenied(
+        actor,
+        context.enterprise_id,
+        "DecisionObject",
+        context.decision_id,
+        Number(context.object_version),
+        correlationId,
+        authz.reason,
+        action,
+      );
+      throw new ForbiddenException({ code: "QAS-AUTH-DENIED" });
+    }
+  }
+
+  private async recordDenied(
+    actor: AuthenticatedActor,
+    tenantId: string,
+    objectType: string,
+    objectId: string,
+    objectVersion: number,
+    correlationId: string,
+    reason: string,
+    attemptedAction: string,
+  ) {
+    await this.database.transaction((client) =>
+      this.events.write(client, {
+        eventType: "AccessDenied",
+        objectType,
+        objectId,
+        objectVersion,
+        actorId: actor.userId,
+        actorRole: this.actorRole(actor),
+        tenantId,
+        correlationId,
+        payload: {
+          attempted_action: attemptedAction,
+          reason,
+        },
+      }),
+    );
+  }
+
+  private async requireDecisionContext(decisionId: string) {
+    const context = await this.loadContext(decisionId);
+    if (!context) throw new NotFoundException();
+    return context;
+  }
+
+  private async loadContext(decisionId: string): Promise<DecisionContextRow | null> {
+    const result = await this.database.query<DecisionContextRow>(
+      this.contextSql(false),
+      [decisionId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async lockContext(
+    client: PoolClient,
+    decisionId: string,
+  ): Promise<DecisionContextRow> {
+    const result = await client.query<DecisionContextRow>(
+      this.contextSql(true),
+      [decisionId],
+    );
+    const row = result.rows[0];
+    if (!row) throw new NotFoundException();
+    return row;
+  }
+
+  private contextSql(forUpdate: boolean) {
+    return `SELECT d.decision_id, d.target_id, d.decision_class,
+                   d.decision_question, d.current_gate, d.trigger_type,
+                   d.state, d.decision_version, d.object_version,
+                   d.evidence_snapshot_id, d.final_decision, d.final_rationale,
+                   d.created_by_user_id, t.enterprise_id, t.asset_id,
+                   t.security_class
+              FROM qassas_core.decision_object d
+              JOIN qassas_core.target t ON t.target_id = d.target_id
+             WHERE d.decision_id = $1
+             LIMIT 1
+             ${forUpdate ? "FOR UPDATE OF d" : ""}`;
+  }
+
+  private ensureVersion(context: DecisionContextRow, expectedVersion: number) {
+    const currentVersion = Number(context.object_version);
+    if (currentVersion !== expectedVersion) {
+      throw new ConflictException({
+        code: "QAS-VERSION-CONFLICT",
+        requested_version: expectedVersion,
+        current_version: currentVersion,
+      });
+    }
+  }
+
+  private async idempotentResult(
+    client: PoolClient,
+    actorId: string,
+    commandType: string,
+    idempotencyKey: string,
+    requestHash: string,
+  ): Promise<Record<string, unknown> | null> {
+    const result = await client.query<IdempotencyRow>(
+      `SELECT request_hash, result_payload
+         FROM qassas_core.command_idempotency
+        WHERE actor_id = $1
+          AND command_type = $2
+          AND idempotency_key = $3`,
+      [actorId, commandType, idempotencyKey],
+    );
+
+    const existing = result.rows[0];
+    if (!existing) return null;
+    if (existing.request_hash !== requestHash) {
+      throw new ConflictException({ code: "QAS-IDEMPOTENCY-CONFLICT" });
+    }
+    return existing.result_payload;
+  }
+
+  private async storeIdempotency(
+    client: PoolClient,
+    actorId: string,
+    commandType: string,
+    idempotencyKey: string,
+    requestHash: string,
+    resultPayload: Record<string, unknown>,
+  ) {
+    await client.query(
+      `INSERT INTO qassas_core.command_idempotency (
+         actor_id, command_type, idempotency_key, request_hash, result_payload
+       ) VALUES ($1,$2,$3,$4,$5)`,
+      [actorId, commandType, idempotencyKey, requestHash, resultPayload],
+    );
+  }
+
+  private hash(value: unknown) {
+    return createHash("sha256")
+      .update(JSON.stringify(value))
+      .digest("hex");
+  }
+
+  private actorRole(actor: AuthenticatedActor) {
+    return actor.roleAssignments[0]?.roleType ?? null;
+  }
+
+  private requireFields(command: OpenDecisionCommand) {
+    for (const [key, value] of Object.entries(command)) {
+      if (typeof value !== "string" || !value.trim()) {
+        throw new BadRequestException(`${key} is required`);
+      }
+    }
+  }
+
+  private toView(context: DecisionContextRow) {
+    return {
+      decision_id: context.decision_id,
+      target_id: context.target_id,
+      decision_class: context.decision_class,
+      decision_question: context.decision_question,
+      current_gate: context.current_gate,
+      trigger_type: context.trigger_type,
+      state: context.state,
+      decision_version: Number(context.decision_version),
+      object_version: Number(context.object_version),
+      evidence_snapshot_id: context.evidence_snapshot_id,
+      final_decision: context.final_decision,
+      final_rationale: context.final_rationale,
+      created_by_user_id: context.created_by_user_id,
+    };
+  }
+}
