@@ -43,5 +43,6 @@ services:
       POSTGRES_USER: ${QASSAS_DB_USER}
       POSTGRES_PWD: ${QASSAS_DB_PASSWORD}
       POSTGRES_SEEDS: postgres
+      DEFAULT_NAMESPACE: qassas-pilot
     ports:
       - "${TEMPORAL_PORT}:7233"
