@@ -95,6 +95,8 @@ export class AuditEventWriter {
           },
           correlation_id: input.correlationId,
           causation_id: input.causationId ?? null,
+          previous_state: input.previousState ?? null,
+          new_state: input.newState ?? null,
           payload,
         },
         input.correlationId,
