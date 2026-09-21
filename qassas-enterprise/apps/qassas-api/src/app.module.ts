@@ -4,6 +4,7 @@ import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DecisionModule } from "./decision/decision.module";
 import { HealthController } from "./health/health.controller";
+import { OutboxModule } from "./outbox/outbox.module";
 import { TargetModule } from "./target/target.module";
 import { TemporalModule } from "./temporal/temporal.module";
 
@@ -11,6 +12,7 @@ import { TemporalModule } from "./temporal/temporal.module";
   imports: [
     DatabaseModule,
     TemporalModule,
+    OutboxModule,
     AuthModule,
     AuditModule,
     TargetModule,
