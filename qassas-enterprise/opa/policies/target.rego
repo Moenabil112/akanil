@@ -18,10 +18,15 @@ scope_contains(scope, value) if {
   scope[i] == value
 }
 
+business_role(ra) if {
+  ra.role_type != "SYSTEM_ADMIN"
+}
+
 allow if {
   input.action == "read"
   some ra in input.subject.role_assignments
   active_role(ra)
+  business_role(ra)
   scope_contains(ra.asset_scope, input.object.asset_id)
 }
 
