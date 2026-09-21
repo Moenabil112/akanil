@@ -83,17 +83,4 @@ INSERT INTO qassas_core.evidence_object (
 )
 ON CONFLICT DO NOTHING;
 
-INSERT INTO qassas_core.decision_object (
-  decision_id, target_id, decision_class, decision_question,
-  current_gate, trigger_type, state
-) VALUES (
-  'DEC-GMCO-002',
-  'TGT-AS-CORE-001',
-  'DISCOVERY_REVIEW',
-  'Does current evidence justify progression toward resource-definition drilling?',
-  'G6_DISCOVERY',
-  'SPRINT0_ENGINEERING_PROOF',
-  'CREATED'
-) ON CONFLICT DO NOTHING;
-
 COMMIT;
