@@ -4,5 +4,8 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["workflows/**/*.ts"]
+  "include": [
+    "workflows/**/*.ts",
+    "worker.ts"
+  ]
 }
