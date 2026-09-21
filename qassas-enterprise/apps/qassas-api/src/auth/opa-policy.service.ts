@@ -12,44 +12,35 @@ export class OpaPolicyService {
     return (process.env.OPA_URL ?? "http://127.0.0.1:8181").replace(/\/$/, "");
   }
 
-  async canReadTarget(
-    actor: AuthenticatedActor,
-    object: {
-      targetId: string;
-      assetId: string;
-      securityClass: string;
-    },
+  private subject(actor: AuthenticatedActor) {
+    return {
+      user_id: actor.userId,
+      role_assignments: actor.roleAssignments.map((ra) => ({
+        role_assignment_id: ra.roleAssignmentId,
+        role_type: ra.roleType,
+        asset_scope: ra.assetScope,
+        jv_scope: ra.jvScope,
+        decision_class_scope: ra.decisionClassScope,
+        capital_threshold: ra.capitalThreshold,
+        security_clearance: ra.securityClearance,
+        effective_from: ra.effectiveFrom,
+        effective_to: ra.effectiveTo,
+        status: ra.status,
+      })),
+    };
+  }
+
+  private async evaluate(
+    packagePath: string,
+    input: Record<string, unknown>,
   ): Promise<PolicyDecision> {
     try {
       const response = await fetch(
-        `${this.baseUrl()}/v1/data/qassas/target/decision`,
+        `${this.baseUrl()}/v1/data/${packagePath}/decision`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            input: {
-              action: "read",
-              subject: {
-                user_id: actor.userId,
-                role_assignments: actor.roleAssignments.map((ra) => ({
-                  role_assignment_id: ra.roleAssignmentId,
-                  role_type: ra.roleType,
-                  asset_scope: ra.assetScope,
-                  jv_scope: ra.jvScope,
-                  security_clearance: ra.securityClearance,
-                  effective_from: ra.effectiveFrom,
-                  effective_to: ra.effectiveTo,
-                  status: ra.status,
-                })),
-              },
-              object: {
-                object_type: "Target",
-                target_id: object.targetId,
-                asset_id: object.assetId,
-                security_class: object.securityClass,
-              },
-            },
-          }),
+          body: JSON.stringify({ input }),
         },
       );
 
@@ -68,5 +59,50 @@ export class OpaPolicyService {
     } catch {
       return { allow: false, reason: "POLICY_ENGINE_UNAVAILABLE" };
     }
+  }
+
+  canReadTarget(
+    actor: AuthenticatedActor,
+    object: {
+      targetId: string;
+      assetId: string;
+      securityClass: string;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/target", {
+      action: "read",
+      subject: this.subject(actor),
+      object: {
+        object_type: "Target",
+        target_id: object.targetId,
+        asset_id: object.assetId,
+        security_class: object.securityClass,
+      },
+    });
+  }
+
+  canActOnDecision(
+    actor: AuthenticatedActor,
+    action: "open" | "request_review" | "approve" | "reject",
+    object: {
+      decisionId?: string;
+      targetId: string;
+      assetId: string;
+      decisionClass: string;
+      createdByUserId?: string | null;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/decision", {
+      action,
+      subject: this.subject(actor),
+      object: {
+        object_type: "DecisionObject",
+        decision_id: object.decisionId ?? null,
+        target_id: object.targetId,
+        asset_id: object.assetId,
+        decision_class: object.decisionClass,
+        created_by_user_id: object.createdByUserId ?? null,
+      },
+    });
   }
 }
