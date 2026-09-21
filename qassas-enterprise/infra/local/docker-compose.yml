@@ -15,10 +15,12 @@ services:
 
   keycloak:
     image: ${KEYCLOAK_IMAGE}
-    command: ["start-dev"]
+    command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ../../keycloak/realm:/opt/keycloak/data/import:ro
     ports:
       - "${KEYCLOAK_PORT}:8080"
 
