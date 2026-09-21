@@ -5,10 +5,12 @@ import { DatabaseModule } from "./database/database.module";
 import { DecisionModule } from "./decision/decision.module";
 import { HealthController } from "./health/health.controller";
 import { TargetModule } from "./target/target.module";
+import { TemporalModule } from "./temporal/temporal.module";
 
 @Module({
   imports: [
     DatabaseModule,
+    TemporalModule,
     AuthModule,
     AuditModule,
     TargetModule,
