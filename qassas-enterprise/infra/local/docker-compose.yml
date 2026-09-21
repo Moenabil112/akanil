@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: ${POSTGIS_IMAGE}
+    environment:
+      POSTGRES_DB: ${QASSAS_DB_NAME}
+      POSTGRES_USER: ${QASSAS_DB_USER}
+      POSTGRES_PASSWORD: ${QASSAS_DB_PASSWORD}
+    ports:
+      - "${QASSAS_DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${QASSAS_DB_USER} -d ${QASSAS_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE}
+    command: ["start-dev"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+
+  opa:
+    image: ${OPA_IMAGE}
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
+    volumes:
+      - ../../opa/policies:/policies:ro
+    ports:
+      - "${OPA_PORT}:8181"
+
+  temporal:
+    image: ${TEMPORAL_IMAGE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${QASSAS_DB_USER}
+      POSTGRES_PWD: ${QASSAS_DB_PASSWORD}
+      POSTGRES_SEEDS: postgres
+    ports:
+      - "${TEMPORAL_PORT}:7233"
