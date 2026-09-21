@@ -1,9 +1,13 @@
 import { Controller, Get } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
+import { TemporalWorkflowService } from "../temporal/temporal-workflow.service";
 
 @Controller("health")
 export class HealthController {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly temporal: TemporalWorkflowService,
+  ) {}
 
   @Get("live")
   live() {
@@ -22,15 +26,19 @@ export class HealthController {
 
   @Get("business-controls")
   async businessControls() {
-    const database = await this.database.ping();
+    const [database, temporal] = await Promise.all([
+      this.database.ping(),
+      this.temporal.health(),
+    ]);
+
     return {
       database: database ? "HEALTHY" : "FAILED",
-      iam: "UNKNOWN",
-      opa: "UNKNOWN",
-      temporal: "UNKNOWN",
+      iam: "CONFIGURED_UNVERIFIED",
+      opa: "CONFIGURED_UNVERIFIED",
+      temporal: temporal ? "HEALTHY" : "FAILED",
       audit: database ? "CONFIGURED_UNVERIFIED" : "UNAVAILABLE",
       outbox_publisher: "NOT_STARTED",
-      controlled_writes_ready: false,
+      controlled_writes_ready: database && temporal,
     };
   }
 }
