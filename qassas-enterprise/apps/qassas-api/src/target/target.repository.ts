@@ -42,11 +42,11 @@ export class TargetRepository {
       [targetId],
     );
 
-    if (!result.rowCount || !result.rows[0].asset_id) {
+    const row = result.rows[0];
+    if (!row?.asset_id) {
       return null;
     }
 
-    const row = result.rows[0];
     return {
       targetId: row.target_id,
       enterpriseId: row.enterprise_id,
