@@ -11,6 +11,7 @@ import { AuditEventWriter } from "../audit/audit-event.writer";
 import { OpaPolicyService } from "../auth/opa-policy.service";
 import type { AuthenticatedActor } from "../auth/auth.types";
 import { DatabaseService } from "../database/database.service";
+import { TemporalWorkflowService } from "../temporal/temporal-workflow.service";
 
 export interface OpenDecisionCommand {
   target_id: string;
@@ -55,6 +56,14 @@ interface IdempotencyRow {
 interface ReviewRow {
   review_id: string;
   required_role: string;
+  workflow_id: string | null;
+}
+
+interface ReviewWorkflowStateRow {
+  workflow_id: string | null;
+  workflow_started_at: Date | null;
+  workflow_signal_sent_at: Date | null;
+  reviewer_role_assignment_id: string | null;
 }
 
 @Injectable()
@@ -63,6 +72,7 @@ export class DecisionService {
     private readonly database: DatabaseService,
     private readonly policy: OpaPolicyService,
     private readonly events: AuditEventWriter,
+    private readonly temporal: TemporalWorkflowService,
   ) {}
 
   async getDecision(decisionId: string, actor: AuthenticatedActor) {
@@ -213,7 +223,7 @@ export class DecisionService {
     );
 
     const requestHash = this.hash({ decisionId, expectedVersion });
-    return this.database.transaction(async (client) => {
+    const result = await this.database.transaction(async (client) => {
       const existing = await this.idempotentResult(
         client,
         actor.userId,
@@ -230,11 +240,13 @@ export class DecisionService {
       }
 
       const reviewId = `REV-${randomUUID()}`;
+      const workflowId = this.temporal.workflowId(decisionId, reviewId);
+
       await client.query(
         `INSERT INTO qassas_core.human_review (
-           review_id, decision_id, required_role, review_status
-         ) VALUES ($1,$2,'EXPLORATION_DIRECTOR','PENDING')`,
-        [reviewId, decisionId],
+           review_id, decision_id, required_role, review_status, workflow_id
+         ) VALUES ($1,$2,'EXPLORATION_DIRECTOR','PENDING',$3)`,
+        [reviewId, decisionId, workflowId],
       );
 
       const nextVersion = Number(current.object_version) + 1;
@@ -258,12 +270,17 @@ export class DecisionService {
         correlationId,
         previousState: current.state,
         newState: "HUMAN_REVIEW_REQUIRED",
-        payload: { review_id: reviewId, required_role: "EXPLORATION_DIRECTOR" },
+        payload: {
+          review_id: reviewId,
+          required_role: "EXPLORATION_DIRECTOR",
+          workflow_id: workflowId,
+        },
       });
 
-      const result = {
+      const resultPayload = {
         decision_id: decisionId,
         review_id: reviewId,
+        workflow_id: workflowId,
         state: "HUMAN_REVIEW_REQUIRED",
         object_version: nextVersion,
       };
@@ -273,10 +290,13 @@ export class DecisionService {
         "RequestHumanReview",
         idempotencyKey,
         requestHash,
-        result,
+        resultPayload,
       );
-      return result;
+      return resultPayload;
     });
+
+    await this.ensureWorkflowStarted(decisionId, result);
+    return result;
   }
 
   approveDecision(
@@ -338,7 +358,7 @@ export class DecisionService {
     const eventType = action === "approve" ? "DecisionApproved" : "DecisionRejected";
     const requestHash = this.hash({ decisionId, expectedVersion, rationale });
 
-    return this.database.transaction(async (client) => {
+    const result = await this.database.transaction(async (client) => {
       const existing = await this.idempotentResult(
         client,
         actor.userId,
@@ -355,7 +375,7 @@ export class DecisionService {
       }
 
       const review = await client.query<ReviewRow>(
-        `SELECT review_id, required_role
+        `SELECT review_id, required_role, workflow_id
            FROM qassas_core.human_review
           WHERE decision_id = $1
             AND review_status = 'PENDING'
@@ -367,6 +387,9 @@ export class DecisionService {
       const pending = review.rows[0];
       if (!pending) {
         throw new ConflictException({ code: "QAS-HUMAN-REVIEW-NOT-PENDING" });
+      }
+      if (!pending.workflow_id) {
+        throw new ConflictException({ code: "QAS-WORKFLOW-NOT-BOUND" });
       }
 
       const reviewerRole = actor.roleAssignments.find(
@@ -423,13 +446,16 @@ export class DecisionService {
         newState: finalState,
         payload: {
           review_id: pending.review_id,
+          workflow_id: pending.workflow_id,
           rationale,
         },
       });
 
-      const result = {
+      const resultPayload = {
         decision_id: decisionId,
         review_id: pending.review_id,
+        workflow_id: pending.workflow_id,
+        reviewer_role_assignment_id: reviewerRole.roleAssignmentId,
         state: finalState,
         final_decision: finalState,
         final_rationale: rationale,
@@ -441,10 +467,100 @@ export class DecisionService {
         commandType,
         idempotencyKey,
         requestHash,
-        result,
+        resultPayload,
       );
-      return result;
+      return resultPayload;
     });
+
+    await this.ensureWorkflowSignaled(
+      action,
+      actor,
+      expectedVersion,
+      rationale,
+      result,
+    );
+    return result;
+  }
+
+  private async ensureWorkflowStarted(
+    decisionId: string,
+    result: Record<string, unknown>,
+  ): Promise<void> {
+    const reviewId = String(result.review_id ?? "");
+    const workflowId = String(result.workflow_id ?? "");
+    if (!reviewId || !workflowId) {
+      throw new ConflictException({ code: "QAS-WORKFLOW-BINDING-MISSING" });
+    }
+
+    const state = await this.database.query<ReviewWorkflowStateRow>(
+      `SELECT workflow_id, workflow_started_at, workflow_signal_sent_at,
+              reviewer_role_assignment_id
+         FROM qassas_core.human_review
+        WHERE review_id = $1
+        LIMIT 1`,
+      [reviewId],
+    );
+
+    if (state.rows[0]?.workflow_started_at) {
+      return;
+    }
+
+    await this.temporal.ensureReviewWorkflowStarted(
+      workflowId,
+      decisionId,
+      reviewId,
+    );
+
+    await this.database.query(
+      `UPDATE qassas_core.human_review
+          SET workflow_started_at = COALESCE(workflow_started_at, now())
+        WHERE review_id = $1`,
+      [reviewId],
+    );
+  }
+
+  private async ensureWorkflowSignaled(
+    action: "approve" | "reject",
+    actor: AuthenticatedActor,
+    expectedVersion: number,
+    rationale: string,
+    result: Record<string, unknown>,
+  ): Promise<void> {
+    const reviewId = String(result.review_id ?? "");
+    if (!reviewId) {
+      throw new ConflictException({ code: "QAS-WORKFLOW-BINDING-MISSING" });
+    }
+
+    const state = await this.database.query<ReviewWorkflowStateRow>(
+      `SELECT workflow_id, workflow_started_at, workflow_signal_sent_at,
+              reviewer_role_assignment_id
+         FROM qassas_core.human_review
+        WHERE review_id = $1
+        LIMIT 1`,
+      [reviewId],
+    );
+
+    const row = state.rows[0];
+    if (!row?.workflow_id || !row.reviewer_role_assignment_id) {
+      throw new ConflictException({ code: "QAS-WORKFLOW-BINDING-MISSING" });
+    }
+    if (row.workflow_signal_sent_at) {
+      return;
+    }
+
+    await this.temporal.signalReview(row.workflow_id, action, {
+      reviewerUserId: actor.userId,
+      roleAssignmentId: row.reviewer_role_assignment_id,
+      expectedDecisionVersion: expectedVersion,
+      rationale,
+    });
+
+    await this.database.query(
+      `UPDATE qassas_core.human_review
+          SET workflow_signal_sent_at = COALESCE(workflow_signal_sent_at, now())
+        WHERE review_id = $1`,
+      [reviewId],
+    );
   }
 
   private async authorizeDecisionAction(
