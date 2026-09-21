@@ -1,0 +1,44 @@
+name: QASSAS Sprint 0 CI
+
+on:
+  push:
+    branches:
+      - "qassas/**"
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-sprint0-ci.yml"
+  pull_request:
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-sprint0-ci.yml"
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qassas-enterprise
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: qassas-enterprise/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: OPA policy tests
+        run: |
+          docker run --rm \
+            -v "$PWD/opa:/policies" \
+            openpolicyagent/opa:latest \
+            test /policies -v
