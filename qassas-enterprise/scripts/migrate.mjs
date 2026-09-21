@@ -5,7 +5,9 @@ import pg from "pg";
 const { Client } = pg;
 
 function config() {
-  if (process.env.DATABASE_URL) return { connectionString: process.env.DATABASE_URL };
+  if (process.env.DATABASE_URL) {
+    return { connectionString: process.env.DATABASE_URL };
+  }
   return {
     host: process.env.QASSAS_DB_HOST ?? "127.0.0.1",
     port: Number(process.env.QASSAS_DB_PORT ?? 5432),
@@ -28,7 +30,9 @@ try {
   `);
 
   const dir = new URL("../database/migrations/", import.meta.url);
-  const names = (await readdir(dir)).filter((name) => name.endsWith(".sql")).sort();
+  const names = (await readdir(dir))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
 
   for (const name of names) {
     const seen = await client.query(
@@ -41,17 +45,17 @@ try {
     }
 
     const sql = await readFile(join(dir.pathname, name), "utf8");
-    await client.query("BEGIN");
     try {
+      // Migration files own their BEGIN/COMMIT boundary.
       await client.query(sql);
       await client.query(
         "INSERT INTO qassas_core.schema_migration (migration_name) VALUES ($1)",
         [name],
       );
-      await client.query("COMMIT");
       console.log(`applied ${name}`);
     } catch (error) {
-      await client.query("ROLLBACK");
+      // Safe if a migration query failed while its transaction is aborted.
+      await client.query("ROLLBACK").catch(() => undefined);
       throw error;
     }
   }
