@@ -42,3 +42,109 @@ jobs:
             -v "$PWD/opa:/policies" \
             openpolicyagent/opa:latest \
             test /policies -v
+
+  e2e-abu-salal:
+    needs: foundation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qassas-enterprise
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: qassas-enterprise/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Start Sprint 0 dependencies
+        run: |
+          set -a
+          source .env
+          set +a
+          docker compose --env-file .env -f infra/local/docker-compose.yml up -d
+
+      - name: Wait for PostgreSQL and Temporal
+        run: |
+          set -a
+          source .env
+          set +a
+
+          for i in {1..60}; do
+            if docker compose --env-file .env -f infra/local/docker-compose.yml \
+              exec -T postgres pg_isready -U "$QASSAS_DB_USER" -d "$QASSAS_DB_NAME"; then
+              break
+            fi
+            sleep 2
+          done
+
+          for i in {1..60}; do
+            if (echo > /dev/tcp/127.0.0.1/7233) >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Apply canonical migrations and Abu Salal seed
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run db:migrate
+          npm run db:seed:abu-salal
+
+      - name: Start Temporal worker and QASSAS API
+        run: |
+          set -a
+          source .env
+          set +a
+
+          npm --workspace @qassas/temporal run worker \
+            > /tmp/qassas-temporal-worker.log 2>&1 &
+          echo $! > /tmp/qassas-temporal-worker.pid
+
+          npm --workspace @qassas/api run start \
+            > /tmp/qassas-api.log 2>&1 &
+          echo $! > /tmp/qassas-api.pid
+
+          for i in {1..60}; do
+            if curl --silent --fail http://127.0.0.1:3001/api/v1/health/live >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "QASSAS API did not become ready"
+          cat /tmp/qassas-api.log || true
+          exit 1
+
+      - name: Execute E2E-BF01-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:abu-salal
+
+      - name: Show diagnostics
+        if: failure()
+        run: |
+          echo "=== API LOG ==="
+          cat /tmp/qassas-api.log || true
+          echo "=== TEMPORAL WORKER LOG ==="
+          cat /tmp/qassas-temporal-worker.log || true
+          echo "=== CONTAINER LOGS ==="
+          docker compose --env-file .env -f infra/local/docker-compose.yml logs --no-color || true
+
+      - name: Stop dependencies
+        if: always()
+        run: docker compose --env-file .env -f infra/local/docker-compose.yml down -v
