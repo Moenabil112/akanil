@@ -1,36 +1,68 @@
 # Sprint 0 Status
 
 ## Branch
+
 `qassas/sprint-0-foundation`
 
-## Current state
-**WP-00A Engineering Foundation: STARTED**
+## Draft PR
 
-Initial foundation includes:
-- isolated QASSAS Enterprise subtree;
-- NestJS API skeleton;
-- canonical domain package;
-- PostgreSQL/PostGIS migration;
-- synthetic Abu Salal seed;
-- OPA target-scope policy and tests;
-- Temporal HumanReview workflow skeleton;
-- local Docker Compose stack;
-- Sprint 0 CI workflow;
-- E2E proof specification.
+#2 — QASSAS Sprint 0 — Build Foundation
 
-## Next sequence
-1. Complete WP-00A CI/repository checks.
-2. WP-00B wire API to PostgreSQL and migrations.
-3. WP-00C Keycloak token verification + RoleAssignment + OPA client.
-4. WP-00D Decision/HumanReview governed commands.
-5. WP-00E Temporal integration.
-6. WP-00F transactional outbox publisher.
-7. WP-00G execute E2E-BF01-001.
-8. WP-00H Sprint 0 exit evidence pack.
+## Formal status
 
-## Architecture constraints
-- NAWAT/QASSAS naming only for new Sprint 0 work.
-- AI is outside Sprint 0.
-- No dashboard-first implementation.
-- No generic PATCH to approve controlled state.
-- System Admin is not business authority.
+# READY_WITH_CONDITIONS
+
+Sprint 0 architecture and E2E engineering proof are complete.
+
+Successful acceptance run:
+
+- GitHub Actions Run #128
+- Run ID: `35671326677`
+- Foundation: PASS
+- E2E-BF01-001: PASS
+
+## Completed work packages
+
+- WP-00A Engineering Foundation
+- WP-00B Canonical Persistence
+- WP-00C IAM Foundation
+- WP-00D Governance Transaction
+- WP-00E Workflow Foundation
+- WP-00F Event Foundation
+- WP-00G Abu Salal Vertical Slice
+- WP-00H Sprint 0 Acceptance
+
+## Proven governed flow
+
+```
+Keycloak Authentication
+→ QASSAS RoleAssignment
+→ OPA Authorization
+→ DecisionObject
+→ HumanReview
+→ SoD Enforcement
+→ Exploration Director Approval
+→ Temporal Outcome
+→ AuditEvent
+→ Transactional Outbox
+→ Idempotent Consumer
+→ Decision Read Model
+→ Audit Reconstruction
+```
+
+## Open hardening conditions
+
+1. triage/remediate the 3 high-severity dependency findings reported by npm;
+2. pin runtime container versions/digests before TEST/UAT/Pilot;
+3. keep `qassas-cli` direct-grant client TEST-only;
+4. complete PR #2 review/merge governance.
+
+See:
+
+`docs/SPRINT0_FOUNDATION_DECISION_Rev0.1.md`
+
+## Next phase
+
+**Sprint 1 — Governed Pilot Core**
+
+Sprint 0 controls remain mandatory regression gates.
