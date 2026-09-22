@@ -409,7 +409,57 @@ async function main() {
   assert.equal(rec1.body.decision_state, "DECISION_READY");
   assert.equal(rec1.body.decision_object_version, baselineDecisionVersion);
 
-  console.log("S1 REC E2E: proving Recommendation does not create approval");
+  console.log("S1 REC E2E: proving recommendation author cannot self-review");
+  const selfReview = await apiRequest(
+    geoToken,
+    "POST",
+    `/decisions/${decisionId}/recommendations/${rec1.body.recommendation_id}/review`,
+    {
+      headers: {
+        "x-qassas-idempotency-key": `S1-REC-SELF-REVIEW-${runId}`,
+        "x-qassas-correlation-id": correlationId,
+      },
+      body: {
+        review_status: "ACCEPTED",
+        rationale: "The recommendation author must not review their own recommendation.",
+      },
+    },
+  );
+  assert.equal(selfReview.response.status, 403);
+
+  console.log("S1 REC E2E: independent Exploration Director accepts Recommendation v1");
+  const review1 = await apiRequest(
+    directorToken,
+    "POST",
+    `/decisions/${decisionId}/recommendations/${rec1.body.recommendation_id}/review`,
+    {
+      headers: {
+        "x-qassas-idempotency-key": `S1-REC-REVIEW-V1-${runId}`,
+        "x-qassas-correlation-id": correlationId,
+      },
+      body: {
+        review_status: "ACCEPTED",
+        rationale:
+          "Accepted as the preferred technical uncertainty-reduction path; this is not execution or capital approval.",
+      },
+    },
+  );
+  assert.ok([200, 201].includes(review1.response.status));
+  assert.equal(review1.body.review_status, "ACCEPTED");
+  assert.equal(review1.body.decision_state, "DECISION_READY");
+  assert.equal(review1.body.execution_authorised, false);
+  assert.equal(review1.body.capital_release_authorised, false);
+
+  const fetchedReview1 = await apiRequest(
+    directorToken,
+    "GET",
+    `/decisions/${decisionId}/recommendations/${rec1.body.recommendation_id}/review`,
+  );
+  assert.equal(fetchedReview1.response.status, 200);
+  assert.equal(fetchedReview1.body.review_status, "ACCEPTED");
+  assert.equal(fetchedReview1.body.execution_authorised, false);
+
+  console.log("S1 REC E2E: proving Recommendation review does not create approval");
   let intelligence = await apiRequest(
     directorToken,
     "GET",
@@ -433,9 +483,31 @@ async function main() {
     await pool2.end();
   }
 
+  console.log("S1 REC E2E: blocking silent supersession without RecommendationDelta trigger");
+  const invalidSupersession = await apiRequest(
+    geoToken,
+    "POST",
+    `/decisions/${decisionId}/recommendations`,
+    {
+      headers: {
+        "x-qassas-idempotency-key": `S1-REC-V2-NO-DELTA-${runId}`,
+        "x-qassas-correlation-id": correlationId,
+      },
+      body: {
+        recommended_action_id: targetedGeophysics.body.candidate_action_id,
+        recommendation_text: "Attempted silent recommendation replacement.",
+        rationale: "This must fail because no change_trigger is supplied.",
+        confidence: "HIGH",
+        model_version: "S1-RULESET-0.1",
+        supersedes_recommendation_id: rec1.body.recommendation_id,
+      },
+    },
+  );
+  assert.equal(invalidSupersession.response.status, 400);
+
   console.log("S1 REC E2E: issuing Recommendation v2 with explicit delta");
   const rec2 = await apiRequest(
-    directorToken,
+    geoToken,
     "POST",
     `/decisions/${decisionId}/recommendations`,
     {
@@ -492,6 +564,47 @@ async function main() {
     rec2.body.recommendation_id,
   );
 
+  console.log("S1 REC E2E: prior recommendation can no longer be reviewed as current");
+  const staleReview = await apiRequest(
+    directorToken,
+    "POST",
+    `/decisions/${decisionId}/recommendations/${rec1.body.recommendation_id}/review`,
+    {
+      headers: {
+        "x-qassas-idempotency-key": `S1-REC-STALE-REVIEW-${runId}`,
+        "x-qassas-correlation-id": correlationId,
+      },
+      body: {
+        review_status: "ACCEPTED",
+        rationale: "A superseded recommendation must not be treated as current.",
+      },
+    },
+  );
+  assert.equal(staleReview.response.status, 409);
+
+  console.log("S1 REC E2E: independent Exploration Director accepts Recommendation v2");
+  const review2 = await apiRequest(
+    directorToken,
+    "POST",
+    `/decisions/${decisionId}/recommendations/${rec2.body.recommendation_id}/review`,
+    {
+      headers: {
+        "x-qassas-idempotency-key": `S1-REC-REVIEW-V2-${runId}`,
+        "x-qassas-correlation-id": correlationId,
+      },
+      body: {
+        review_status: "ACCEPTED",
+        rationale:
+          "Accepted as current technical recommendation; execution and capital remain separately governed.",
+      },
+    },
+  );
+  assert.ok([200, 201].includes(review2.response.status));
+  assert.equal(review2.body.review_status, "ACCEPTED");
+  assert.equal(review2.body.decision_state, "DECISION_READY");
+  assert.equal(review2.body.execution_authorised, false);
+  assert.equal(review2.body.capital_release_authorised, false);
+
   console.log("S1 REC E2E: proving immutable recommendation history");
   const pool3 = new Pool(dbConfig());
   try {
@@ -522,6 +635,20 @@ async function main() {
     );
     assert.equal(Number(reviews.rows[0]?.count ?? 0), 0);
 
+    const recommendationReviews = await pool3.query(
+      `SELECT recommendation_id, review_status
+         FROM qassas_core.recommendation_review
+        WHERE decision_id = $1
+        ORDER BY created_at`,
+      [decisionId],
+    );
+    assert.equal(recommendationReviews.rows.length, 2);
+    assert.ok(
+      recommendationReviews.rows.every(
+        (row) => row.review_status === "ACCEPTED",
+      ),
+    );
+
     await waitUntil("Recommendation outbox publication", async () => {
       const pending = await pool3.query(
         `SELECT count(*)::int AS count
@@ -547,7 +674,8 @@ async function main() {
     assert.ok((audit.NextBestTestProposed ?? 0) >= 1);
     assert.equal(audit.RecommendationIssued ?? 0, 1);
     assert.equal(audit.RecommendationChanged ?? 0, 1);
-    assert.ok((audit.AccessDenied ?? 0) >= 2);
+    assert.equal(audit.RecommendationAccepted ?? 0, 2);
+    assert.ok((audit.AccessDenied ?? 0) >= 3);
   } finally {
     await pool3.end();
   }
@@ -559,6 +687,8 @@ async function main() {
     recommendationV1: rec1.body.recommendation_id,
     recommendationV2: rec2.body.recommendation_id,
     deltaId: rec2.body.delta_id,
+    recommendationReviewV1: review1.body.review_id,
+    recommendationReviewV2: review2.body.review_id,
   });
 }
 
