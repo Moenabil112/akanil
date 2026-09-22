@@ -1,4 +1,4 @@
-name: QASSAS Sprint 2 Multi-Asset Pilot CI
+name: QASSAS Sprint 3 Portfolio Intelligence CI
 
 on:
   push:
@@ -98,6 +98,7 @@ jobs:
           npm run db:migrate
           npm run db:seed:abu-salal
           npm run db:seed:sprint2
+          npm run db:seed:sprint3
 
       - name: Start Temporal worker and QASSAS API
         run: |
@@ -172,6 +173,13 @@ jobs:
           source .env
           set +a
           npm run e2e:sprint2-multi-asset
+
+      - name: Execute E2E-S3-PORTFOLIO-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint3-portfolio
 
       - name: Show diagnostics
         if: failure()
