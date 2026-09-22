@@ -15,6 +15,13 @@ const temporalNamespace =
   process.env.TEMPORAL_NAMESPACE ?? "qassas-pilot";
 const runId = process.env.GITHUB_RUN_ID ?? randomUUID();
 
+function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  return fetch(url, {
+    ...options,
+    signal: options.signal ?? AbortSignal.timeout(timeoutMs),
+  });
+}
+
 const users = {
   geo: {
     id: "11111111-1111-4111-8111-111111111111",
@@ -65,7 +72,7 @@ async function waitUntil(label, fn, timeoutMs = 90000, intervalMs = 1000) {
 }
 
 async function formToken(url, values) {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(values),
@@ -113,7 +120,7 @@ async function prepareUser(token, user, password) {
     },
   }[user.username];
 
-  const update = await fetch(
+  const update = await fetchWithTimeout(
     `${keycloakBase}/admin/realms/${realm}/users/${user.id}`,
     {
       method: "PUT",
@@ -132,7 +139,7 @@ async function prepareUser(token, user, password) {
   );
   assert.equal(update.status, 204, `profile update failed for ${user.id}`);
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${keycloakBase}/admin/realms/${realm}/users/${user.id}/reset-password`,
     {
       method: "PUT",
@@ -171,7 +178,7 @@ async function apiRequest(token, method, path, options = {}) {
     headers["content-type"] = "application/json";
   }
 
-  const response = await fetch(`${apiBase}${path}`, {
+  const response = await fetchWithTimeout(`${apiBase}${path}`, {
     method,
     headers,
     body:
@@ -194,14 +201,14 @@ async function main() {
   console.log("E2E-BF01-001: waiting for services");
 
   await waitUntil("Keycloak", async () => {
-    const r = await fetch(
+    const r = await fetchWithTimeout(
       `${keycloakBase}/realms/${realm}/.well-known/openid-configuration`,
     );
     return r.ok;
   });
 
   await waitUntil("QASSAS API", async () => {
-    const r = await fetch(`${apiBase}/health/live`);
+    const r = await fetchWithTimeout(`${apiBase}/health/live`);
     return r.ok;
   });
 
