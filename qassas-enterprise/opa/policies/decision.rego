@@ -47,14 +47,7 @@ base_scope(ra) if {
 }
 
 allow if {
-  input.action == "open"
-  some ra in input.subject.role_assignments
-  base_scope(ra)
-  technical_author_role(ra)
-}
-
-allow if {
-  input.action == "request_review"
+  input.action in {"open", "bind_evidence", "request_review"}
   some ra in input.subject.role_assignments
   base_scope(ra)
   technical_author_role(ra)
