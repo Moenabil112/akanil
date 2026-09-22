@@ -134,6 +134,7 @@ scored AS (
       WHEN COALESCE(q.blocking_conflict_count, 0) > 0 THEN 'BLOCKED_EVIDENCE_CONFLICT'
       WHEN COALESCE(q.blocking_gap_count, 0) > 0 THEN 'BLOCKED_DATA_GAP'
       WHEN COALESCE(q.licence_at_risk, false) THEN 'BLOCKED_LICENCE_RISK'
+      WHEN COALESCE(q.commitment_at_risk, false) THEN 'BLOCKED_WORK_COMMITMENT'
       WHEN COALESCE(q.partner_approval_required, false) THEN 'BLOCKED_PARTNER_CONSENT'
       WHEN q.capital_state = 'BLOCKED' THEN 'BLOCKED_CAPITAL'
       WHEN q.queue_state = 'EXECUTION_FUNDED' THEN 'EXECUTION_FUNDED'
