@@ -1,5 +1,33 @@
 BEGIN;
 
+INSERT INTO qassas_security.user_identity (
+  user_id, external_subject, status
+) VALUES (
+  'USR-PORT-001',
+  '77777777-7777-4777-8777-777777777777',
+  'ACTIVE'
+)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO qassas_security.role_assignment (
+  role_assignment_id, user_id, role_type, asset_scope, jv_scope,
+  decision_class_scope, capital_threshold, security_clearance,
+  effective_from, effective_to, status
+) VALUES (
+  'RA-PORT-GMCO-001',
+  'USR-PORT-001',
+  'PORTFOLIO_EXECUTIVE',
+  '["LIC-UHM-001","LIC-ABUSALAL-001","LIC-AHN-001","LIC-ALGODEYER-001","LIC-JADIB-001"]'::jsonb,
+  '["JV-AHN-001"]'::jsonb,
+  '["MRE_READINESS","DISCOVERY_REVIEW","MULTI_TARGET_PORTFOLIO","INCREMENTAL_RESOURCE_VALUE","COVERED_TARGET_TEST"]'::jsonb,
+  NULL,
+  'C3_COMMERCIAL_JV_RESTRICTED',
+  '2026-01-01T00:00:00Z',
+  NULL,
+  'ACTIVE'
+)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO qassas_core.portfolio_scoring_model (
   model_code, model_version, model_name,
   w_geological_potential, w_evidence_confidence, w_technical_maturity,
