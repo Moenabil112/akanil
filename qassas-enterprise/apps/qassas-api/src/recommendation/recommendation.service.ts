@@ -435,6 +435,12 @@ export class RecommendationService {
       correlationId,
     );
     await this.requireCandidateAction(command.recommended_action_id, decisionId);
+    if (command.change_trigger?.trigger_evidence_ids?.length) {
+      await this.validateTriggerEvidence(
+        context.target_id,
+        command.change_trigger.trigger_evidence_ids,
+      );
+    }
 
     const requestHash = this.hash({ decisionId, ...command });
     return this.database.transaction(async (client) => {
@@ -611,6 +617,25 @@ export class RecommendationService {
     if (!result.rowCount) {
       throw new BadRequestException(
         "candidate_action_id must belong to the DecisionObject",
+      );
+    }
+  }
+
+  private async validateTriggerEvidence(
+    targetId: string,
+    evidenceIds: string[],
+  ) {
+    const uniqueIds = [...new Set(evidenceIds)];
+    const result = await this.database.query<{ evidence_id: string }>(
+      `SELECT evidence_id
+         FROM qassas_core.evidence_object
+        WHERE target_id = $1
+          AND evidence_id = ANY($2::text[])`,
+      [targetId, uniqueIds],
+    );
+    if (result.rows.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        "change_trigger evidence must belong to the same target",
       );
     }
   }
