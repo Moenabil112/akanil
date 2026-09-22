@@ -60,6 +60,10 @@ interface IntelligenceRow {
   priority_rationale: string | null;
   assessed_by_user_id: string | null;
   priority_assessed_at: Date | null;
+  action_model_version: string | null;
+  advisory_action_class: string | null;
+  action_rationale: string | null;
+  action_input_snapshot: Record<string, unknown> | null;
 }
 
 interface RankedRow extends IntelligenceRow {
@@ -119,6 +123,10 @@ export class PortfolioIntelligenceService {
         priority_signal_counts: this.countBy(
           ranked,
           (row) => this.prioritySignal(this.score(row.priority_index)),
+        ),
+        advisory_action_counts: this.countBy(
+          ranked,
+          (row) => row.advisory_action_class ?? "UNCLASSIFIED",
         ),
         governance_blocked_count: ranked.filter((row) =>
           this.governanceBlocked(row),
@@ -190,7 +198,7 @@ export class PortfolioIntelligenceService {
 
   private async visibleRows(actor: AuthenticatedActor): Promise<IntelligenceRow[]> {
     const result = await this.database.query<IntelligenceRow>(
-      "SELECT * FROM qassas_core.portfolio_intelligence_latest WHERE pilot_status = 'ACTIVE' ORDER BY display_order",
+      "SELECT * FROM qassas_core.portfolio_action_classification_latest WHERE pilot_status = 'ACTIVE' ORDER BY display_order",
     );
     const visible: IntelligenceRow[] = [];
     for (const row of result.rows) {
@@ -266,6 +274,15 @@ export class PortfolioIntelligenceService {
         state: row.capital_state,
         released_total: this.score(row.released_capital_total),
         release_count: Number(row.capital_release_count ?? 0),
+      },
+      advisory_action: {
+        model_version: row.action_model_version,
+        class: row.advisory_action_class,
+        rationale: row.action_rationale,
+        input_basis: row.action_input_snapshot ?? {},
+        can_authorise_execution: false,
+        can_release_capital: false,
+        can_change_gate: false,
       },
       score_can_authorise_execution: false,
       score_can_release_capital: false,
