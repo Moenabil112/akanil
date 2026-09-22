@@ -35,6 +35,17 @@ technical_role(ra) if {
   ra.role_type == "EXPLORATION_DIRECTOR"
 }
 
+review_role(ra) if {
+  ra.role_type == "EXPLORATION_DIRECTOR"
+}
+
+base_scope(ra) if {
+  active_role(ra)
+  business_role(ra)
+  scope_contains(ra.asset_scope, input.object.asset_id)
+  decision_scope_contains(ra.decision_class_scope, input.object.decision_class)
+}
+
 allow if {
   input.action in {
     "create_action",
@@ -42,11 +53,16 @@ allow if {
     "issue_recommendation"
   }
   some ra in input.subject.role_assignments
-  active_role(ra)
-  business_role(ra)
+  base_scope(ra)
   technical_role(ra)
-  scope_contains(ra.asset_scope, input.object.asset_id)
-  decision_scope_contains(ra.decision_class_scope, input.object.decision_class)
+}
+
+allow if {
+  input.action == "review_recommendation"
+  input.subject.user_id != input.object.recommendation_created_by_user_id
+  some ra in input.subject.role_assignments
+  base_scope(ra)
+  review_role(ra)
 }
 
 decision := {
