@@ -6,6 +6,7 @@ import { DecisionModule } from "./decision/decision.module";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { HealthController } from "./health/health.controller";
 import { OutboxModule } from "./outbox/outbox.module";
+import { RecommendationModule } from "./recommendation/recommendation.module";
 import { TargetModule } from "./target/target.module";
 import { TemporalModule } from "./temporal/temporal.module";
 
@@ -18,6 +19,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     AuditModule,
     TargetModule,
     EvidenceModule,
+    RecommendationModule,
     DecisionModule,
   ],
   controllers: [HealthController],
