@@ -146,6 +146,18 @@ async function main() {
   assert.equal(queue.body.visible_asset_count, 5);
   assert.equal(queue.body.model_version, "PPI-0.1");
 
+
+  console.log("S3 E2E: Advisory action classifications are versioned and non-authoritative");
+  for (const asset of queue.body.assets) {
+    assert.equal(asset.advisory_action.model_version, "PAC-0.1");
+    assert.ok(asset.advisory_action.class);
+    assert.ok(asset.advisory_action.rationale);
+    assert.equal(asset.advisory_action.can_authorise_execution, false);
+    assert.equal(asset.advisory_action.can_release_capital, false);
+    assert.equal(asset.advisory_action.can_change_gate, false);
+    assert.ok(asset.advisory_action.input_basis);
+  }
+
   const positions = queue.body.assets.map((asset) => asset.priority_position);
   assert.deepEqual(
     [...positions].sort((a, b) => a - b),
@@ -170,6 +182,16 @@ async function main() {
   assert.ok(jad.value_of_information.voi_points_per_million_sar > 90);
   assert.notEqual(jad.priority_position, jad.voi_position);
 
+  assert.equal(jad.advisory_action.class, "SELECTIVE_VALIDATION");
+
+  const ahn = queue.body.assets.find(
+    (asset) => asset.decision_object_key === "DO-003",
+  );
+  assert.ok(ahn);
+  assert.equal(ahn.governance.partner_approval_required, true);
+  assert.equal(ahn.advisory_action.class, "JV_GOVERNED");
+  assert.notEqual(ahn.advisory_action.class, "ACCELERATE");
+
   console.log("S3 E2E: Priority and VoI are distinct signals");
   assert.notEqual(
     queue.body.assets[0].decision_object_key,
@@ -191,6 +213,15 @@ async function main() {
   assert.equal(boardBefore.body.visible_asset_count, 5);
   assert.equal(boardBefore.body.priority_queue.length, 5);
   assert.equal(boardBefore.body.information_leverage.length, 5);
+
+  assert.ok(boardBefore.body.summary.advisory_action_counts);
+  assert.equal(
+    Object.values(boardBefore.body.summary.advisory_action_counts).reduce(
+      (sum, count) => sum + count,
+      0,
+    ),
+    5,
+  );
   assert.ok(boardBefore.body.change_intelligence);
   assert.ok(
     boardBefore.body.change_intelligence.visible_change_count >= 1,
