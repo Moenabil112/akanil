@@ -137,6 +137,13 @@ jobs:
           set +a
           npm run e2e:sprint1-evidence
 
+      - name: Execute E2E-S1-RECOMMENDATION-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint1-recommendation
+
       - name: Show diagnostics
         if: failure()
         run: |
