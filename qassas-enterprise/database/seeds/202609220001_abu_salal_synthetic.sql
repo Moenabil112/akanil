@@ -34,7 +34,19 @@ INSERT INTO qassas_security.role_assignment (
 (
   'RA-PARTNER-AHN-001', 'USR-PARTNER-001', 'PARTNER_USER',
   '["LIC-AHN-001"]'::jsonb, '["JV-AHN-001"]'::jsonb, '[]'::jsonb,
-  NULL, 'C2_CONFIDENTIAL_TECHNICAL', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+  NULL, 'C3_COMMERCIAL_JV_RESTRICTED', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+),
+(
+  'RA-GEO-AHN-001', 'USR-GEO-001', 'SENIOR_GEOLOGIST',
+  '["LIC-AHN-001"]'::jsonb, '["JV-AHN-001"]'::jsonb,
+  '["MULTI_TARGET_PORTFOLIO"]'::jsonb,
+  NULL, 'C3_COMMERCIAL_JV_RESTRICTED', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+),
+(
+  'RA-EXP-AHN-001', 'USR-EXP-001', 'EXPLORATION_DIRECTOR',
+  '["LIC-AHN-001"]'::jsonb, '["JV-AHN-001"]'::jsonb,
+  '["MULTI_TARGET_PORTFOLIO"]'::jsonb,
+  NULL, 'C3_COMMERCIAL_JV_RESTRICTED', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
 )
 ON CONFLICT DO NOTHING;
 
@@ -51,6 +63,23 @@ INSERT INTO qassas_core.target (
   'NORMAL_PROCESSING',
   'ACTIVE',
   'C2_CONFIDENTIAL_TECHNICAL'
+) ON CONFLICT (target_id) DO UPDATE SET
+  asset_id = EXCLUDED.asset_id,
+  security_class = EXCLUDED.security_class;
+
+INSERT INTO qassas_core.target (
+  target_id, enterprise_id, prospect_id, asset_id, name,
+  current_gate, operational_state, target_status, security_class
+) VALUES (
+  'TGT-AHN-PORT-001',
+  'ENT-GMCO-001',
+  'PROS-AHN-PORT-001',
+  'LIC-AHN-001',
+  'Al Hajar North Synthetic Portfolio Target',
+  'G2_TARGET_GENERATED',
+  'NORMAL_PROCESSING',
+  'ACTIVE',
+  'C3_COMMERCIAL_JV_RESTRICTED'
 ) ON CONFLICT (target_id) DO UPDATE SET
   asset_id = EXCLUDED.asset_id,
   security_class = EXCLUDED.security_class;
