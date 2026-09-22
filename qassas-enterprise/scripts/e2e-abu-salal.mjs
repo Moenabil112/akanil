@@ -89,9 +89,51 @@ async function adminToken() {
   );
 }
 
-async function setPassword(token, userId, password) {
+async function prepareUser(token, user, password) {
+  const profile = {
+    senior_geologist: {
+      firstName: "Senior",
+      lastName: "Geologist",
+      email: "senior.geologist@qassas.local",
+    },
+    exploration_director: {
+      firstName: "Exploration",
+      lastName: "Director",
+      email: "exploration.director@qassas.local",
+    },
+    system_admin: {
+      firstName: "System",
+      lastName: "Administrator",
+      email: "system.admin@qassas.local",
+    },
+    partner_user: {
+      firstName: "Pilot",
+      lastName: "Partner",
+      email: "partner.user@qassas.local",
+    },
+  }[user.username];
+
+  const update = await fetch(
+    `${keycloakBase}/admin/realms/${realm}/users/${user.id}`,
+    {
+      method: "PUT",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        username: user.username,
+        enabled: true,
+        emailVerified: true,
+        requiredActions: [],
+        ...profile,
+      }),
+    },
+  );
+  assert.equal(update.status, 204, `profile update failed for ${user.id}`);
+
   const response = await fetch(
-    `${keycloakBase}/admin/realms/${realm}/users/${userId}/reset-password`,
+    `${keycloakBase}/admin/realms/${realm}/users/${user.id}/reset-password`,
     {
       method: "PUT",
       headers: {
@@ -105,7 +147,7 @@ async function setPassword(token, userId, password) {
       }),
     },
   );
-  assert.equal(response.status, 204, `password reset failed for ${userId}`);
+  assert.equal(response.status, 204, `password reset failed for ${user.id}`);
 }
 
 async function userToken(username, password) {
@@ -166,7 +208,7 @@ async function main() {
   const password = `ci-${randomBytes(18).toString("hex")}`;
   const admin = await adminToken();
   for (const user of Object.values(users)) {
-    await setPassword(admin, user.id, password);
+    await prepareUser(admin, user, password);
   }
 
   const [geoToken, directorToken, adminUserToken, partnerToken] =
