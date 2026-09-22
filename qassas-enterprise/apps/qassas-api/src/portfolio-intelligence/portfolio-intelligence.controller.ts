@@ -31,8 +31,18 @@ export class PortfolioIntelligenceController {
   }
 
   @Get("control-board")
-  controlBoard(@CurrentActor() actor: AuthenticatedActor) {
-    return this.intelligence.controlBoard(actor);
+  async controlBoard(@CurrentActor() actor: AuthenticatedActor) {
+    const [board, changeFeed] = await Promise.all([
+      this.intelligence.controlBoard(actor),
+      this.changes.changeFeed(actor),
+    ]);
+    return {
+      ...board,
+      change_intelligence: {
+        visible_change_count: changeFeed.visible_change_count,
+        recent_changes: changeFeed.changes.slice(0, 10),
+      },
+    };
   }
 
   @Get("change-feed")
