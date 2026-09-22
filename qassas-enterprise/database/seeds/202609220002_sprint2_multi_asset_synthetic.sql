@@ -1,5 +1,14 @@
 BEGIN;
 
+INSERT INTO qassas_security.user_identity (
+  user_id, external_subject, status
+) VALUES (
+  'USR-CP-001',
+  '66666666-6666-4666-8666-666666666666',
+  'ACTIVE'
+)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO qassas_core.workflow_template (
   template_code, template_name, decision_class, initial_gate,
   required_evidence_classes, default_reviewer_role,
@@ -208,6 +217,11 @@ INSERT INTO qassas_security.role_assignment (
   decision_class_scope, capital_threshold, security_clearance,
   effective_from, effective_to, status
 ) VALUES
+(
+  'RA-CP-UHM-001', 'USR-CP-001', 'RESOURCE_GEOLOGIST_CP',
+  '["LIC-UHM-001"]'::jsonb, '[]'::jsonb, '["MRE_READINESS"]'::jsonb,
+  NULL, 'C2_CONFIDENTIAL_TECHNICAL', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+),
 (
   'RA-GEO-UHM-001', 'USR-GEO-001', 'SENIOR_GEOLOGIST',
   '["LIC-UHM-001"]'::jsonb, '[]'::jsonb, '["MRE_READINESS"]'::jsonb,
