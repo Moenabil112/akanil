@@ -99,6 +99,16 @@
       "lastName": "Reviewer",
       "email": "finance.reviewer@qassas.local",
       "requiredActions": []
+    },
+    {
+      "id": "66666666-6666-4666-8666-666666666666",
+      "username": "resource_geologist_cp",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Resource",
+      "lastName": "Geologist CP",
+      "email": "resource.geologist.cp@qassas.local",
+      "requiredActions": []
     }
   ]
 }
