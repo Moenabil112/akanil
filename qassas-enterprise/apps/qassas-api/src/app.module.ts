@@ -7,6 +7,7 @@ import { DecisionModule } from "./decision/decision.module";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { HealthController } from "./health/health.controller";
 import { OutboxModule } from "./outbox/outbox.module";
+import { MultiAssetModule } from "./multi-asset/multi-asset.module";
 import { PortfolioControlModule } from "./portfolio-control/portfolio-control.module";
 import { RecommendationModule } from "./recommendation/recommendation.module";
 import { RightsModule } from "./rights/rights.module";
@@ -26,6 +27,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     RecommendationModule,
     RightsModule,
     PortfolioControlModule,
+    MultiAssetModule,
     DecisionModule,
   ],
   controllers: [HealthController],
