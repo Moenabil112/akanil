@@ -98,6 +98,14 @@ export class PortfolioIntelligenceController {
     );
   }
 
+  @Get("assets/:assetId/assessments")
+  assessmentHistory(
+    @Param("assetId") assetId: string,
+    @CurrentActor() actor: AuthenticatedActor,
+  ) {
+    return this.assessments.history(assetId, actor);
+  }
+
   @Get("change-feed")
   changeFeed(@CurrentActor() actor: AuthenticatedActor) {
     return this.changes.changeFeed(actor);
