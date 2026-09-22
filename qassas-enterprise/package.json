@@ -18,7 +18,8 @@
     "e2e:sprint1-evidence": "node scripts/e2e-sprint1-evidence.mjs",
     "e2e:sprint1-recommendation": "node scripts/e2e-sprint1-recommendation.mjs",
     "e2e:sprint1-capital": "node scripts/e2e-sprint1-capital.mjs",
-    "e2e:sprint1-control": "node scripts/e2e-sprint1-control.mjs"
+    "e2e:sprint1-control": "node scripts/e2e-sprint1-control.mjs",
+    "e2e:sprint1-rights": "node scripts/e2e-sprint1-rights.mjs"
   },
   "engines": {
     "node": ">=22"
