@@ -166,6 +166,25 @@ export class OpaPolicyService {
     });
   }
 
+  canActOnCapital(
+    actor: AuthenticatedActor,
+    action: "request" | "assess" | "approve" | "release" | "return",
+    object: {
+      assetId: string;
+      requestedAmount: number;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/capital", {
+      action,
+      subject: this.subject(actor),
+      object: {
+        object_type: "CapitalGovernance",
+        asset_id: object.assetId,
+        requested_amount: object.requestedAmount,
+      },
+    });
+  }
+
   canActOnDecision(
     actor: AuthenticatedActor,
     action:
