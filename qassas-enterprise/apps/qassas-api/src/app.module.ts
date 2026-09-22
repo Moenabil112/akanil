@@ -3,6 +3,7 @@ import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DecisionModule } from "./decision/decision.module";
+import { EvidenceModule } from "./evidence/evidence.module";
 import { HealthController } from "./health/health.controller";
 import { OutboxModule } from "./outbox/outbox.module";
 import { TargetModule } from "./target/target.module";
@@ -16,6 +17,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     AuthModule,
     AuditModule,
     TargetModule,
+    EvidenceModule,
     DecisionModule,
   ],
   controllers: [HealthController],
