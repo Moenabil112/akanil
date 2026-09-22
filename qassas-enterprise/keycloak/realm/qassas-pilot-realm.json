@@ -109,6 +109,16 @@
       "lastName": "Geologist CP",
       "email": "resource.geologist.cp@qassas.local",
       "requiredActions": []
+    },
+    {
+      "id": "77777777-7777-4777-8777-777777777777",
+      "username": "portfolio_executive",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Portfolio",
+      "lastName": "Executive",
+      "email": "portfolio.executive@qassas.local",
+      "requiredActions": []
     }
   ]
 }
