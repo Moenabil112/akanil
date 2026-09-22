@@ -144,6 +144,13 @@ jobs:
           set +a
           npm run e2e:sprint1-recommendation
 
+      - name: Execute E2E-S1-CAPITAL-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint1-capital
+
       - name: Show diagnostics
         if: failure()
         run: |
