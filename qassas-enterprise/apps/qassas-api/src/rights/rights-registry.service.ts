@@ -894,25 +894,28 @@ export class RightsRegistryService {
     });
     if (decision.allow) return;
 
-    if (auditDenied) {
-      await this.database.transaction((client) =>
-        this.events.write(client, {
-          eventType: "AccessDenied",
-          objectType: "Licence",
-          objectId: assetId,
-          objectVersion: 1,
-          actorId: actor.userId,
-          actorRole: this.actorRole(actor),
-          tenantId: context.enterprise_id,
-          correlationId,
-          payload: {
-            attempted_action: action,
-            jv_id: jvId,
-            reason: decision.reason,
-          },
-        }),
-      );
+    if (!auditDenied) {
+      // Conceal asset existence on unauthorised read paths.
+      throw new NotFoundException();
     }
+
+    await this.database.transaction((client) =>
+      this.events.write(client, {
+        eventType: "AccessDenied",
+        objectType: "Licence",
+        objectId: assetId,
+        objectVersion: 1,
+        actorId: actor.userId,
+        actorRole: this.actorRole(actor),
+        tenantId: context.enterprise_id,
+        correlationId,
+        payload: {
+          attempted_action: action,
+          jv_id: jvId,
+          reason: decision.reason,
+        },
+      }),
+    );
     throw new ForbiddenException({ code: "QAS-AUTH-DENIED" });
   }
 
