@@ -109,6 +109,29 @@ export class OpaPolicyService {
     });
   }
 
+  canActOnRecommendation(
+    actor: AuthenticatedActor,
+    action: "create_action" | "propose_test" | "issue_recommendation",
+    object: {
+      decisionId: string;
+      targetId: string;
+      assetId: string;
+      decisionClass: string;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/recommendation", {
+      action,
+      subject: this.subject(actor),
+      object: {
+        object_type: "DecisionIntelligence",
+        decision_id: object.decisionId,
+        target_id: object.targetId,
+        asset_id: object.assetId,
+        decision_class: object.decisionClass,
+      },
+    });
+  }
+
   canActOnDecision(
     actor: AuthenticatedActor,
     action:
