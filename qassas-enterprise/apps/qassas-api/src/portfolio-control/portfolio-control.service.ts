@@ -33,6 +33,8 @@ interface ControlRow {
   capital_state: string | null;
   all_required_gates_pass: boolean | null;
   capital_blocking_reasons: string[] | null;
+  released_capital_total: string;
+  capital_release_count: number;
   portfolio_attention_state: string;
   last_activity_at: Date;
 }
@@ -140,6 +142,8 @@ export class PortfolioControlService {
         state: row.capital_state,
         all_required_gates_pass: row.all_required_gates_pass,
         blocking_reasons: row.capital_blocking_reasons ?? [],
+        released_capital_total: Number(row.released_capital_total),
+        release_count: Number(row.capital_release_count),
       },
       portfolio_attention_state: row.portfolio_attention_state,
       last_activity_at: row.last_activity_at.toISOString(),
