@@ -81,9 +81,42 @@ export class OpaPolicyService {
     });
   }
 
+  canActOnEvidence(
+    actor: AuthenticatedActor,
+    action:
+      | "register"
+      | "qualify"
+      | "create_snapshot"
+      | "open_gap"
+      | "open_conflict",
+    object: {
+      targetId: string;
+      assetId: string;
+      securityClass: string;
+      evidenceId?: string;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/evidence", {
+      action,
+      subject: this.subject(actor),
+      object: {
+        object_type: "EvidenceGovernance",
+        target_id: object.targetId,
+        asset_id: object.assetId,
+        security_class: object.securityClass,
+        evidence_id: object.evidenceId ?? null,
+      },
+    });
+  }
+
   canActOnDecision(
     actor: AuthenticatedActor,
-    action: "open" | "request_review" | "approve" | "reject",
+    action:
+      | "open"
+      | "bind_evidence"
+      | "request_review"
+      | "approve"
+      | "reject",
     object: {
       decisionId?: string;
       targetId: string;
