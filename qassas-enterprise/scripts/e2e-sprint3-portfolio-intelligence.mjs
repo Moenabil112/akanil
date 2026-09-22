@@ -209,6 +209,70 @@ async function main() {
     })),
   );
 
+  console.log("S3 E2E: governed Priority Assessment versioning");
+  const assessmentHeaders = {
+    "x-qassas-idempotency-key": "S3-JAD-ASSESSMENT-V2",
+    "x-qassas-correlation-id": "CORR-S3-JAD-ASSESSMENT-V2",
+  };
+  const assessmentBody = {
+    asset_id: "LIC-JADIB-001",
+    geological_potential: 95,
+    evidence_confidence: 90,
+    technical_maturity: 92,
+    scale_potential: 90,
+    strategic_adjacency: 88,
+    cost_efficiency: 95,
+    data_quality: 90,
+    work_commitment_risk: 5,
+    partner_constraint: 5,
+    next_decision_cost_sar: 300000,
+    expected_information_gain_points: 28,
+    rationale:
+      "Synthetic Sprint 3 reassessment: higher controlled confidence while preserving governance separation.",
+  };
+
+  const createdAssessment = await post(
+    portfolioToken,
+    "/portfolio-intelligence/assessments",
+    assessmentBody,
+    assessmentHeaders,
+  );
+  assert.ok([200, 201].includes(createdAssessment.response.status));
+  assert.equal(createdAssessment.body.asset_id, "LIC-JADIB-001");
+  assert.equal(createdAssessment.body.assessment_version, 2);
+  assert.equal(
+    createdAssessment.body.supersedes_assessment_id,
+    "PPA-JAD-001",
+  );
+  assert.equal(createdAssessment.body.score_authority, "ADVISORY_ONLY");
+  assert.equal(createdAssessment.body.score_can_authorise_execution, false);
+  assert.equal(createdAssessment.body.score_can_release_capital, false);
+  assert.equal(createdAssessment.body.score_can_change_gate, false);
+
+  const duplicateAssessment = await post(
+    portfolioToken,
+    "/portfolio-intelligence/assessments",
+    assessmentBody,
+    assessmentHeaders,
+  );
+  assert.ok([200, 201].includes(duplicateAssessment.response.status));
+  assert.equal(
+    duplicateAssessment.body.assessment_id,
+    createdAssessment.body.assessment_id,
+  );
+
+  const updatedQueue = await get(
+    portfolioToken,
+    "/portfolio-intelligence/priority-queue",
+  );
+  assert.equal(updatedQueue.response.status, 200);
+  const jadAfterAssessment = updatedQueue.body.assets.find(
+    (item) => item.decision_object_key === "DO-005",
+  );
+  assert.ok(jadAfterAssessment);
+  assert.equal(jadAfterAssessment.priority_position, 1);
+  assert.equal(jadAfterAssessment.voi_position, 1);
+
   console.log("S3 E2E: Score reads do not mutate governed state");
   const queueAgain = await get(
     portfolioToken,
