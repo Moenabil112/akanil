@@ -13,6 +13,12 @@ import { RoleAssignmentRepository } from "./role-assignment.repository";
     KeycloakAuthGuard,
     OpaPolicyService,
   ],
-  exports: [KeycloakAuthGuard, OpaPolicyService],
+  exports: [
+    AuthService,
+    KeycloakJwtService,
+    RoleAssignmentRepository,
+    KeycloakAuthGuard,
+    OpaPolicyService,
+  ],
 })
 export class AuthModule {}
