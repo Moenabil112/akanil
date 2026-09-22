@@ -179,7 +179,7 @@ export class ConstraintAssessmentService {
           computed.licenceAtRisk,
           computed.executionAllowed,
           computed.portfolioOptimisationAllowed,
-          computed.blockingReasons,
+          JSON.stringify(computed.blockingReasons),
           actor.userId,
         ],
       );
