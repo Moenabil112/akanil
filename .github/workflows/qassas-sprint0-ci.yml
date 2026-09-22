@@ -88,12 +88,23 @@ jobs:
             sleep 2
           done
 
+          temporal_ready=false
           for i in {1..60}; do
-            if (echo > /dev/tcp/127.0.0.1/7233) >/dev/null 2>&1; then
+            if docker compose --env-file .env -f infra/local/docker-compose.yml \
+              exec -T temporal temporal operator namespace describe \
+              --namespace "$TEMPORAL_NAMESPACE" \
+              --address 127.0.0.1:7233 >/dev/null 2>&1; then
+              temporal_ready=true
               break
             fi
             sleep 2
           done
+
+          if [ "$temporal_ready" != "true" ]; then
+            echo "Temporal namespace $TEMPORAL_NAMESPACE did not become ready"
+            docker compose --env-file .env -f infra/local/docker-compose.yml logs --no-color temporal || true
+            exit 1
+          fi
 
       - name: Apply canonical migrations and Abu Salal seed
         run: |
