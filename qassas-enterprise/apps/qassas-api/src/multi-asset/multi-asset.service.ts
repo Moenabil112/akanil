@@ -103,6 +103,210 @@ export class MultiAssetService {
     };
   }
 
+  async explorationDirectorQueue(actor: AuthenticatedActor) {
+    this.requireRole(actor, "EXPLORATION_DIRECTOR");
+
+    const result = await this.database.query<PilotQueueRow>(
+      "SELECT * FROM qassas_core.pilot_decision_queue WHERE pilot_status = 'ACTIVE' ORDER BY display_order",
+    );
+    const visible = await this.authorisedRows(actor, result.rows);
+
+    return {
+      interface: "EXPLORATION_DIRECTOR",
+      visible_asset_count: visible.length,
+      assets: visible.map((row) => ({
+        decision_object_key: row.decision_object_key,
+        asset_id: row.asset_id,
+        asset_name: row.asset_name,
+        decision_class: row.decision_class,
+        configured_gate: row.configured_gate,
+        workflow_template_code: row.workflow_template_code,
+        queue_state: row.queue_state,
+        decision_id: row.decision_id,
+        decision_state: row.decision_state,
+        evidence_readiness: row.evidence_control_state ?? "NOT_ASSESSED",
+        blocking_gap_count: Number(row.blocking_gap_count ?? 0),
+        blocking_conflict_count: Number(row.blocking_conflict_count ?? 0),
+        recommendation_review_status: row.recommendation_review_status,
+        partner_approval_required: row.partner_approval_required,
+        partner_consent_status: row.partner_consent_status,
+        work_commitment_risk: row.work_commitment_risk,
+        capital_state: row.capital_state,
+        portfolio_attention_state: row.portfolio_attention_state,
+        next_controlled_action: this.nextControlledAction(row),
+      })),
+    };
+  }
+
+  async financeQueue(actor: AuthenticatedActor) {
+    this.requireRole(actor, "FINANCE_REVIEWER");
+
+    const result = await this.database.query<PilotQueueRow>(
+      "SELECT * FROM qassas_core.pilot_decision_queue WHERE pilot_status = 'ACTIVE' ORDER BY display_order",
+    );
+    const visible = await this.authorisedRows(actor, result.rows);
+
+    return {
+      interface: "FINANCE",
+      visible_asset_count: visible.length,
+      assets: visible.map((row) => ({
+        decision_object_key: row.decision_object_key,
+        asset_id: row.asset_id,
+        asset_name: row.asset_name,
+        decision_class: row.decision_class,
+        queue_state: row.queue_state,
+        decision_id: row.decision_id,
+        decision_state: row.decision_state,
+        rights_blocked:
+          row.partner_approval_required === true ||
+          row.licence_at_risk === true ||
+          row.commitment_at_risk === true,
+        partner_approval_required: row.partner_approval_required,
+        partner_consent_status: row.partner_consent_status,
+        work_commitment_risk: row.work_commitment_risk,
+        capital_request_id: row.capital_request_id,
+        capital_type: row.capital_type,
+        requested_amount:
+          row.requested_amount === null ? null : Number(row.requested_amount),
+        currency: row.currency,
+        capital_state: row.capital_state,
+        released_capital_total: Number(row.released_capital_total ?? 0),
+        capital_release_count: Number(row.capital_release_count ?? 0),
+      })),
+    };
+  }
+
+  async jvReviewQueue(actor: AuthenticatedActor) {
+    this.requireRole(actor, "PARTNER_USER");
+
+    const result = await this.database.query<PilotQueueRow>(
+      "SELECT * FROM qassas_core.pilot_decision_queue WHERE pilot_status = 'ACTIVE' ORDER BY display_order",
+    );
+
+    const partnerAssets = new Set(
+      actor.roleAssignments
+        .filter((role) => role.roleType === "PARTNER_USER" && role.status === "ACTIVE")
+        .flatMap((role) => role.assetScope),
+    );
+
+    const candidateRows = result.rows.filter((row) =>
+      partnerAssets.has(row.asset_id),
+    );
+    const visible = await this.authorisedRows(actor, candidateRows);
+
+    const assets = [];
+    for (const row of visible) {
+      const partnerRole = actor.roleAssignments.find(
+        (role) =>
+          role.roleType === "PARTNER_USER" &&
+          role.status === "ACTIVE" &&
+          role.assetScope.includes(row.asset_id),
+      );
+      const jvScope = partnerRole?.jvScope ?? [];
+
+      const constraints = await this.database.query<{
+        constraint_id: string;
+        jv_id: string;
+        partner_name: string;
+        reserved_matter: string;
+        consent_required: boolean;
+        voting_threshold: string | null;
+        consent_status: string | null;
+        effective_until: Date | null;
+      }>(
+        `SELECT c.constraint_id, c.jv_id, c.partner_name,
+                c.reserved_matter, c.consent_required, c.voting_threshold,
+                ce.consent_status, ce.effective_until
+           FROM qassas_core.jv_constraint c
+           LEFT JOIN LATERAL (
+             SELECT consent_status, effective_until
+               FROM qassas_core.jv_consent_event e
+              WHERE e.constraint_id = c.constraint_id
+              ORDER BY e.recorded_at DESC, e.consent_event_id DESC
+              LIMIT 1
+           ) ce ON true
+          WHERE c.licence_id = $1
+            AND c.jv_id = ANY($2::text[])
+          ORDER BY c.constraint_id`,
+        [row.asset_id, jvScope],
+      );
+
+      const commitments = await this.database.query<{
+        commitment_id: string;
+        description: string;
+        due_date: Date;
+        mandatory: boolean;
+        status: string;
+      }>(
+        `SELECT commitment_id, description, due_date, mandatory, status
+           FROM qassas_core.work_commitment
+          WHERE licence_id = $1
+            AND mandatory = true
+          ORDER BY due_date, commitment_id`,
+        [row.asset_id],
+      );
+
+      assets.push({
+        decision_object_key: row.decision_object_key,
+        asset_id: row.asset_id,
+        asset_name: row.asset_name,
+        decision_class: row.decision_class,
+        queue_state: row.queue_state,
+        decision_id: row.decision_id,
+        decision_state: row.decision_state,
+        reserved_matters: constraints.rows.map((constraint) => ({
+          constraint_id: constraint.constraint_id,
+          jv_id: constraint.jv_id,
+          partner_name: constraint.partner_name,
+          reserved_matter: constraint.reserved_matter,
+          consent_required: constraint.consent_required,
+          voting_threshold: constraint.voting_threshold,
+          consent_status: constraint.consent_status ?? "NOT_RECORDED",
+          effective_until: constraint.effective_until?.toISOString() ?? null,
+        })),
+        mandatory_work_commitments: commitments.rows.map((commitment) => ({
+          commitment_id: commitment.commitment_id,
+          description: commitment.description,
+          due_date: commitment.due_date.toISOString().slice(0, 10),
+          status: commitment.status,
+        })),
+      });
+    }
+
+    return {
+      interface: "JV_REVIEW",
+      visible_asset_count: assets.length,
+      assets,
+    };
+  }
+
+  private requireRole(actor: AuthenticatedActor, roleType: string) {
+    const now = Date.now();
+    const allowed = actor.roleAssignments.some((role) => {
+      if (role.roleType !== roleType || role.status !== "ACTIVE") return false;
+      const from = Date.parse(role.effectiveFrom);
+      const to = role.effectiveTo ? Date.parse(role.effectiveTo) : null;
+      return from <= now && (to === null || to > now);
+    });
+
+    if (!allowed) {
+      throw new NotFoundException();
+    }
+  }
+
+  private nextControlledAction(row: PilotQueueRow): string {
+    if (row.queue_state === "NOT_STARTED") return "OPEN_DECISION";
+    if ((row.blocking_conflict_count ?? 0) > 0) return "RESOLVE_EVIDENCE_CONFLICT";
+    if ((row.blocking_gap_count ?? 0) > 0) return "CLOSE_BLOCKING_DATA_GAP";
+    if (row.partner_approval_required === true) return "OBTAIN_PARTNER_CONSENT";
+    if (row.recommendation_id === null) return "ISSUE_RECOMMENDATION";
+    if (row.recommendation_review_status !== "APPROVED") return "REVIEW_RECOMMENDATION";
+    if (row.capital_request_id === null) return "PREPARE_CAPITAL_REQUEST";
+    if (row.capital_state === "APPROVED") return "ASSESS_EXECUTION_RELEASE";
+    if (row.capital_state === "RELEASED") return "MONITOR_EXECUTION_OUTCOME";
+    return "HUMAN_REVIEW";
+  }
+
   private assetQuery() {
     return [
       "SELECT q.*,",
