@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "./audit/audit.module";
+import { CapitalModule } from "./capital/capital.module";
 import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DecisionModule } from "./decision/decision.module";
@@ -18,6 +19,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     OutboxModule,
     AuthModule,
     AuditModule,
+    CapitalModule,
     TargetModule,
     EvidenceModule,
     RecommendationModule,
