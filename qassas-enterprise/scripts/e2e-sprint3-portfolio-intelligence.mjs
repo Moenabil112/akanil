@@ -100,6 +100,21 @@ async function get(token, path) {
   return { response, body };
 }
 
+async function post(token, path, body, headers = {}) {
+  const response = await fetch(apiBase + path, {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + token,
+      "content-type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  const parsed = text ? JSON.parse(text) : null;
+  return { response, body: parsed };
+}
+
 async function main() {
   const password = "s3-" + randomBytes(18).toString("hex");
   const admin = await adminToken();
@@ -176,6 +191,13 @@ async function main() {
   assert.equal(boardBefore.body.visible_asset_count, 5);
   assert.equal(boardBefore.body.priority_queue.length, 5);
   assert.equal(boardBefore.body.information_leverage.length, 5);
+  assert.ok(boardBefore.body.change_intelligence);
+  assert.ok(
+    boardBefore.body.change_intelligence.visible_change_count >= 1,
+  );
+  assert.ok(
+    Array.isArray(boardBefore.body.change_intelligence.recent_changes),
+  );
 
   const boardCapitalBefore = JSON.stringify(
     boardBefore.body.priority_queue.map((asset) => ({
