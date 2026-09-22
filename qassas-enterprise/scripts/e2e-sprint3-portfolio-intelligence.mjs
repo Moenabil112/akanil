@@ -251,6 +251,137 @@ async function main() {
   assert.equal(asset.body.dimensions.cost_efficiency, 90);
   assert.equal(asset.body.voi_position, 1);
 
+  console.log("S3 E2E: Recommendation Delta change intelligence");
+  const changeFeed = await get(
+    portfolioToken,
+    "/portfolio-intelligence/change-feed",
+  );
+  assert.equal(changeFeed.response.status, 200);
+  assert.equal(changeFeed.body.interface, "PORTFOLIO_CHANGE_FEED");
+  assert.ok(changeFeed.body.visible_change_count >= 1);
+  for (const change of changeFeed.body.changes) {
+    assert.equal(change.change_can_approve_decision, false);
+    assert.equal(change.change_can_release_capital, false);
+    assert.equal(change.change_can_change_gate, false);
+    assert.ok(change.previous.recommendation_id);
+    assert.ok(change.next.recommendation_id);
+  }
+
+  const directorChanges = await get(
+    directorToken,
+    "/portfolio-intelligence/change-feed",
+  );
+  assert.equal(directorChanges.response.status, 200);
+
+  for (const token of [partnerToken, adminUserToken]) {
+    const deniedChanges = await get(
+      token,
+      "/portfolio-intelligence/change-feed",
+    );
+    assert.equal(deniedChanges.response.status, 404);
+  }
+
+  console.log("S3 E2E: governed Portfolio Reassessment Snapshot");
+  const beforeSnapshotBoard = await get(
+    portfolioToken,
+    "/portfolio-intelligence/control-board",
+  );
+  assert.equal(beforeSnapshotBoard.response.status, 200);
+  const governedBefore = JSON.stringify(
+    beforeSnapshotBoard.body.priority_queue.map((item) => ({
+      key: item.decision_object_key,
+      gate: item.configured_gate,
+      decision_state: item.decision_state,
+      capital_state: item.capital.state,
+      released_total: item.capital.released_total,
+    })),
+  );
+
+  const snapshotHeaders = {
+    "x-qassas-idempotency-key": "S3-REASSESSMENT-SNAPSHOT-001",
+    "x-qassas-correlation-id": "CORR-S3-REASSESSMENT-001",
+  };
+  const snapshotBody = {
+    trigger_type: "SPRINT3_CONTROL_BOARD_REASSESSMENT",
+    source_event_refs: changeFeed.body.changes
+      .slice(0, 3)
+      .map((change) => change.delta_id),
+  };
+
+  const createdSnapshot = await post(
+    portfolioToken,
+    "/portfolio-intelligence/reassessment-snapshots",
+    snapshotBody,
+    snapshotHeaders,
+  );
+  assert.ok([200, 201].includes(createdSnapshot.response.status));
+  assert.equal(createdSnapshot.body.asset_count, 5);
+  assert.equal(createdSnapshot.body.snapshot_can_authorise_execution, false);
+  assert.equal(createdSnapshot.body.snapshot_can_release_capital, false);
+  assert.equal(createdSnapshot.body.snapshot_can_change_gate, false);
+  assert.ok(createdSnapshot.body.snapshot_id);
+  assert.ok(createdSnapshot.body.portfolio_state_hash);
+
+  const duplicateSnapshot = await post(
+    portfolioToken,
+    "/portfolio-intelligence/reassessment-snapshots",
+    snapshotBody,
+    snapshotHeaders,
+  );
+  assert.ok([200, 201].includes(duplicateSnapshot.response.status));
+  assert.equal(
+    duplicateSnapshot.body.snapshot_id,
+    createdSnapshot.body.snapshot_id,
+  );
+
+  const snapshotList = await get(
+    portfolioToken,
+    "/portfolio-intelligence/reassessment-snapshots",
+  );
+  assert.equal(snapshotList.response.status, 200);
+  assert.ok(snapshotList.body.snapshot_count >= 1);
+  assert.equal(snapshotList.body.snapshots[0].immutable, true);
+
+  const snapshotDetail = await get(
+    portfolioToken,
+    "/portfolio-intelligence/reassessment-snapshots/" +
+      createdSnapshot.body.snapshot_id,
+  );
+  assert.equal(snapshotDetail.response.status, 200);
+  assert.equal(snapshotDetail.body.immutable, true);
+  assert.equal(
+    snapshotDetail.body.portfolio_state_hash,
+    createdSnapshot.body.portfolio_state_hash,
+  );
+  assert.equal(
+    snapshotDetail.body.snapshot.portfolio_control_board.visible_asset_count,
+    5,
+  );
+
+  const afterSnapshotBoard = await get(
+    portfolioToken,
+    "/portfolio-intelligence/control-board",
+  );
+  assert.equal(afterSnapshotBoard.response.status, 200);
+  const governedAfter = JSON.stringify(
+    afterSnapshotBoard.body.priority_queue.map((item) => ({
+      key: item.decision_object_key,
+      gate: item.configured_gate,
+      decision_state: item.decision_state,
+      capital_state: item.capital.state,
+      released_total: item.capital.released_total,
+    })),
+  );
+  assert.equal(governedAfter, governedBefore);
+
+  for (const token of [partnerToken, adminUserToken, directorToken]) {
+    const deniedSnapshots = await get(
+      token,
+      "/portfolio-intelligence/reassessment-snapshots",
+    );
+    assert.equal(deniedSnapshots.response.status, 404);
+  }
+
   console.log("E2E-S3-PORTFOLIO-001 PASS");
 }
 
