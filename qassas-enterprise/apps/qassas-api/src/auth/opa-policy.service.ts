@@ -111,12 +111,17 @@ export class OpaPolicyService {
 
   canActOnRecommendation(
     actor: AuthenticatedActor,
-    action: "create_action" | "propose_test" | "issue_recommendation",
+    action:
+      | "create_action"
+      | "propose_test"
+      | "issue_recommendation"
+      | "review_recommendation",
     object: {
       decisionId: string;
       targetId: string;
       assetId: string;
       decisionClass: string;
+      recommendationCreatedByUserId?: string | null;
     },
   ): Promise<PolicyDecision> {
     return this.evaluate("qassas/recommendation", {
@@ -128,6 +133,8 @@ export class OpaPolicyService {
         target_id: object.targetId,
         asset_id: object.assetId,
         decision_class: object.decisionClass,
+        recommendation_created_by_user_id:
+          object.recommendationCreatedByUserId ?? null,
       },
     });
   }
