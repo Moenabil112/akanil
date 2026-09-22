@@ -46,6 +46,31 @@ interface IdempotencyRow {
   result_payload: Record<string, unknown>;
 }
 
+interface AssessmentHistoryRow {
+  assessment_id: string;
+  profile_id: string;
+  decision_id: string | null;
+  model_version: string;
+  assessment_version: number;
+  geological_potential: string;
+  evidence_confidence: string;
+  technical_maturity: string;
+  scale_potential: string;
+  strategic_adjacency: string;
+  cost_efficiency: string;
+  data_quality: string;
+  work_commitment_risk: string;
+  partner_constraint: string;
+  next_decision_cost_sar: string;
+  expected_information_gain_points: string;
+  priority_index: string;
+  voi_points_per_million_sar: string;
+  rationale: string;
+  assessed_by_user_id: string | null;
+  supersedes_assessment_id: string | null;
+  created_at: Date;
+}
+
 @Injectable()
 export class PortfolioAssessmentService {
   private readonly modelVersion = "PPI-0.1";
@@ -185,6 +210,63 @@ export class PortfolioAssessmentService {
     });
   }
 
+  async history(assetId: string, actor: AuthenticatedActor) {
+    this.requireReader(actor);
+
+    const profileResult = await this.database.query<ProfileRow>(
+      "SELECT p.profile_id, p.enterprise_id, p.asset_id, p.primary_target_id, p.security_class, q.decision_id FROM qassas_core.pilot_asset_profile p LEFT JOIN qassas_core.pilot_decision_queue q ON q.profile_id = p.profile_id WHERE p.asset_id = $1 AND p.pilot_status = 'ACTIVE' LIMIT 1",
+      [assetId],
+    );
+    const profile = profileResult.rows[0];
+    if (!profile) throw new NotFoundException();
+
+    const allowed = await this.policy.canReadTarget(actor, {
+      targetId: profile.primary_target_id,
+      assetId: profile.asset_id,
+      securityClass: profile.security_class,
+    });
+    if (!allowed.allow) throw new NotFoundException();
+
+    const result = await this.database.query<AssessmentHistoryRow>(
+      "SELECT assessment_id, profile_id, decision_id, model_version, assessment_version, geological_potential, evidence_confidence, technical_maturity, scale_potential, strategic_adjacency, cost_efficiency, data_quality, work_commitment_risk, partner_constraint, next_decision_cost_sar, expected_information_gain_points, priority_index, voi_points_per_million_sar, rationale, assessed_by_user_id, supersedes_assessment_id, created_at FROM qassas_core.portfolio_priority_assessment WHERE profile_id = $1 ORDER BY assessment_version DESC, created_at DESC",
+      [profile.profile_id],
+    );
+
+    return {
+      asset_id: assetId,
+      assessment_count: result.rows.length,
+      assessments: result.rows.map((row) => ({
+        assessment_id: row.assessment_id,
+        model_version: row.model_version,
+        assessment_version: Number(row.assessment_version),
+        decision_id: row.decision_id,
+        dimensions: {
+          geological_potential: Number(row.geological_potential),
+          evidence_confidence: Number(row.evidence_confidence),
+          technical_maturity: Number(row.technical_maturity),
+          scale_potential: Number(row.scale_potential),
+          strategic_adjacency: Number(row.strategic_adjacency),
+          cost_efficiency: Number(row.cost_efficiency),
+          data_quality: Number(row.data_quality),
+          work_commitment_risk: Number(row.work_commitment_risk),
+          partner_constraint: Number(row.partner_constraint),
+        },
+        next_decision_cost_sar: Number(row.next_decision_cost_sar),
+        expected_information_gain_points: Number(
+          row.expected_information_gain_points,
+        ),
+        priority_index: Number(row.priority_index),
+        voi_points_per_million_sar: Number(row.voi_points_per_million_sar),
+        rationale: row.rationale,
+        assessed_by_user_id: row.assessed_by_user_id,
+        supersedes_assessment_id: row.supersedes_assessment_id,
+        created_at: row.created_at.toISOString(),
+        immutable: true,
+        score_authority: "ADVISORY_ONLY",
+      })),
+    };
+  }
+
   private validate(input: CreatePriorityAssessmentInput) {
     const bounded = [
       ["geological_potential", input.geological_potential],
@@ -210,6 +292,24 @@ export class PortfolioAssessmentService {
     if (!input.rationale?.trim()) {
       throw new BadRequestException("rationale is required");
     }
+  }
+
+  private requireReader(actor: AuthenticatedActor) {
+    const now = Date.now();
+    const allowed = actor.roleAssignments.some((role) => {
+      if (
+        !["PORTFOLIO_EXECUTIVE", "EXPLORATION_DIRECTOR"].includes(
+          role.roleType,
+        ) ||
+        role.status !== "ACTIVE"
+      ) {
+        return false;
+      }
+      const from = Date.parse(role.effectiveFrom);
+      const to = role.effectiveTo ? Date.parse(role.effectiveTo) : null;
+      return from <= now && (to === null || to > now);
+    });
+    if (!allowed) throw new NotFoundException();
   }
 
   private requirePortfolioExecutive(actor: AuthenticatedActor) {
