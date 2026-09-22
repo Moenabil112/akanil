@@ -52,6 +52,7 @@ interface PilotProfileRow {
   decision_class: string;
   configured_gate: string;
   workflow_template_code: string;
+  default_reviewer_role: string;
   template_active: boolean;
 }
 
@@ -446,7 +447,15 @@ export class DecisionService {
       correlationId,
     );
 
-    const requestHash = this.hash({ decisionId, expectedVersion });
+    const pilotProfile = await this.pilotProfileForTarget(context.target_id);
+    const requiredReviewerRole =
+      pilotProfile?.default_reviewer_role ?? "EXPLORATION_DIRECTOR";
+
+    const requestHash = this.hash({
+      decisionId,
+      expectedVersion,
+      requiredReviewerRole,
+    });
     const result = await this.database.transaction(async (client) => {
       const existing = await this.idempotentResult(
         client,
@@ -469,8 +478,8 @@ export class DecisionService {
       await client.query(
         `INSERT INTO qassas_core.human_review (
            review_id, decision_id, required_role, review_status, workflow_id
-         ) VALUES ($1,$2,'EXPLORATION_DIRECTOR','PENDING',$3)`,
-        [reviewId, decisionId, workflowId],
+         ) VALUES ($1,$2,$3,'PENDING',$4)`,
+        [reviewId, decisionId, requiredReviewerRole, workflowId],
       );
 
       const nextVersion = Number(current.object_version) + 1;
@@ -496,7 +505,7 @@ export class DecisionService {
         newState: "HUMAN_REVIEW_REQUIRED",
         payload: {
           review_id: reviewId,
-          required_role: "EXPLORATION_DIRECTOR",
+          required_role: requiredReviewerRole,
           workflow_id: workflowId,
         },
       });
@@ -505,6 +514,7 @@ export class DecisionService {
         decision_id: decisionId,
         review_id: reviewId,
         workflow_id: workflowId,
+        required_reviewer_role: requiredReviewerRole,
         state: "HUMAN_REVIEW_REQUIRED",
         object_version: nextVersion,
       };
@@ -793,7 +803,8 @@ export class DecisionService {
     const result = await this.database.query<PilotProfileRow>(
       [
         "SELECT p.decision_class, p.configured_gate,",
-        "       p.workflow_template_code, wt.active AS template_active",
+        "       p.workflow_template_code,",
+        "       wt.default_reviewer_role, wt.active AS template_active",
         "  FROM qassas_core.pilot_asset_profile p",
         "  JOIN qassas_core.workflow_template wt",
         "    ON wt.template_code = p.workflow_template_code",
