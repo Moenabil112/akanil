@@ -1,4 +1,4 @@
-name: QASSAS Sprint 0 CI
+name: QASSAS Sprint 1 Governed Core CI
 
 on:
   push:
@@ -129,6 +129,13 @@ jobs:
           source .env
           set +a
           npm run e2e:abu-salal
+
+      - name: Execute E2E-S1-EVIDENCE-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint1-evidence
 
       - name: Show diagnostics
         if: failure()
