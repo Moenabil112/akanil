@@ -16,7 +16,8 @@
     "e2e:abu-salal": "node scripts/e2e-abu-salal.mjs",
     "temporal:wait": "node scripts/wait-temporal.mjs",
     "e2e:sprint1-evidence": "node scripts/e2e-sprint1-evidence.mjs",
-    "e2e:sprint1-recommendation": "node scripts/e2e-sprint1-recommendation.mjs"
+    "e2e:sprint1-recommendation": "node scripts/e2e-sprint1-recommendation.mjs",
+    "e2e:sprint1-capital": "node scripts/e2e-sprint1-capital.mjs"
   },
   "engines": {
     "node": ">=22"
