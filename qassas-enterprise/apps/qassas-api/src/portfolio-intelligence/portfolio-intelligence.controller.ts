@@ -12,6 +12,7 @@ import {
 import { CurrentActor } from "../auth/current-actor.decorator";
 import { KeycloakAuthGuard } from "../auth/keycloak-auth.guard";
 import type { AuthenticatedActor } from "../auth/auth.types";
+import { PortfolioAssessmentService } from "./portfolio-assessment.service";
 import { PortfolioChangeService } from "./portfolio-change.service";
 import { PortfolioIntelligenceService } from "./portfolio-intelligence.service";
 import { PortfolioReassessmentService } from "./portfolio-reassessment.service";
@@ -21,6 +22,7 @@ import { PortfolioReassessmentService } from "./portfolio-reassessment.service";
 export class PortfolioIntelligenceController {
   constructor(
     private readonly intelligence: PortfolioIntelligenceService,
+    private readonly assessments: PortfolioAssessmentService,
     private readonly changes: PortfolioChangeService,
     private readonly reassessment: PortfolioReassessmentService,
   ) {}
@@ -43,6 +45,57 @@ export class PortfolioIntelligenceController {
         recent_changes: changeFeed.changes.slice(0, 10),
       },
     };
+  }
+
+  @Post("assessments")
+  createPriorityAssessment(
+    @Body() body: {
+      asset_id?: string;
+      geological_potential?: number;
+      evidence_confidence?: number;
+      technical_maturity?: number;
+      scale_potential?: number;
+      strategic_adjacency?: number;
+      cost_efficiency?: number;
+      data_quality?: number;
+      work_commitment_risk?: number;
+      partner_constraint?: number;
+      next_decision_cost_sar?: number;
+      expected_information_gain_points?: number;
+      rationale?: string;
+    },
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers("x-qassas-idempotency-key") idempotencyKey?: string,
+    @Headers("x-qassas-correlation-id") correlationId?: string,
+  ) {
+    if (!body.asset_id?.trim()) {
+      throw new BadRequestException("asset_id is required");
+    }
+    if (!idempotencyKey?.trim()) {
+      throw new BadRequestException("X-Qassas-Idempotency-Key is required");
+    }
+    return this.assessments.createAssessment(
+      actor,
+      {
+        asset_id: body.asset_id.trim(),
+        geological_potential: Number(body.geological_potential),
+        evidence_confidence: Number(body.evidence_confidence),
+        technical_maturity: Number(body.technical_maturity),
+        scale_potential: Number(body.scale_potential),
+        strategic_adjacency: Number(body.strategic_adjacency),
+        cost_efficiency: Number(body.cost_efficiency),
+        data_quality: Number(body.data_quality),
+        work_commitment_risk: Number(body.work_commitment_risk),
+        partner_constraint: Number(body.partner_constraint),
+        next_decision_cost_sar: Number(body.next_decision_cost_sar),
+        expected_information_gain_points: Number(
+          body.expected_information_gain_points,
+        ),
+        rationale: body.rationale ?? "",
+      },
+      idempotencyKey.trim(),
+      correlationId || "CORR-" + randomUUID(),
+    );
   }
 
   @Get("change-feed")
