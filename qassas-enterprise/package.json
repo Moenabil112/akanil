@@ -21,7 +21,9 @@
     "e2e:sprint1-control": "node scripts/e2e-sprint1-control.mjs",
     "e2e:sprint1-rights": "node scripts/e2e-sprint1-rights.mjs",
     "db:seed:sprint2": "node scripts/seed-sprint2-multi-asset.mjs",
-    "e2e:sprint2-multi-asset": "node scripts/e2e-sprint2-multi-asset.mjs"
+    "e2e:sprint2-multi-asset": "node scripts/e2e-sprint2-multi-asset.mjs",
+    "db:seed:sprint3": "node scripts/seed-sprint3-portfolio-intelligence.mjs",
+    "e2e:sprint3-portfolio": "node scripts/e2e-sprint3-portfolio-intelligence.mjs"
   },
   "engines": {
     "node": ">=22"
