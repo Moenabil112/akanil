@@ -23,6 +23,10 @@ const users = {
     id: "55555555-5555-4555-8555-555555555555",
     username: "finance_reviewer",
   },
+  cp: {
+    id: "66666666-6666-4666-8666-666666666666",
+    username: "resource_geologist_cp",
+  },
 };
 
 async function formToken(url, values) {
@@ -123,13 +127,19 @@ async function main() {
     await prepareUser(admin, user, password);
   }
 
-  const [directorToken, adminUserToken, partnerToken, financeToken] =
-    await Promise.all([
-      userToken(users.director.username, password),
-      userToken(users.admin.username, password),
-      userToken(users.partner.username, password),
-      userToken(users.finance.username, password),
-    ]);
+  const [
+    directorToken,
+    adminUserToken,
+    partnerToken,
+    financeToken,
+    cpToken,
+  ] = await Promise.all([
+    userToken(users.director.username, password),
+    userToken(users.admin.username, password),
+    userToken(users.partner.username, password),
+    userToken(users.finance.username, password),
+    userToken(users.cp.username, password),
+  ]);
 
   console.log("S2 E2E: Exploration Director five-asset registry");
   const directorAssets = await get(directorToken, "/pilot-assets");
@@ -391,6 +401,57 @@ async function main() {
     5,
     "all five Pilot Decision Objects must have a live governed Decision context",
   );
+
+  console.log("S2 E2E: MRE workflow enforces Resource Geologist CP review");
+  const uhmDecisionId = openedByKey.get("DO-001");
+  assert.ok(uhmDecisionId);
+
+  const uhmReview = await post(
+    directorToken,
+    "/decisions/" + uhmDecisionId + "/reviews",
+    {},
+    {
+      "if-match": "1",
+      "x-qassas-idempotency-key": "S2-DO-001-REVIEW",
+      "x-qassas-correlation-id": "CORR-S2-DO-001-REVIEW",
+    },
+  );
+  assert.ok([200, 201].includes(uhmReview.response.status));
+  assert.equal(
+    uhmReview.body.required_reviewer_role,
+    "RESOURCE_GEOLOGIST_CP",
+  );
+  assert.equal(uhmReview.body.state, "HUMAN_REVIEW_REQUIRED");
+  assert.equal(uhmReview.body.object_version, 2);
+
+  const directorCannotSubstitute = await post(
+    directorToken,
+    "/decisions/" + uhmDecisionId + "/approve",
+    { rationale: "Exploration Director must not substitute for the CP review." },
+    {
+      "if-match": "2",
+      "x-qassas-idempotency-key": "S2-DO-001-DIRECTOR-APPROVE",
+      "x-qassas-correlation-id": "CORR-S2-DO-001-DIRECTOR-APPROVE",
+    },
+  );
+  assert.equal(directorCannotSubstitute.response.status, 403);
+
+  const cpApproval = await post(
+    cpToken,
+    "/decisions/" + uhmDecisionId + "/approve",
+    {
+      rationale:
+        "Independent Resource Geologist/CP review confirms the controlled MRE-readiness decision.",
+    },
+    {
+      "if-match": "2",
+      "x-qassas-idempotency-key": "S2-DO-001-CP-APPROVE",
+      "x-qassas-correlation-id": "CORR-S2-DO-001-CP-APPROVE",
+    },
+  );
+  assert.ok([200, 201].includes(cpApproval.response.status));
+  assert.equal(cpApproval.body.state, "APPROVED");
+  assert.equal(cpApproval.body.object_version, 3);
 
   console.log("S2 E2E: Mamilah remains a separate governed target");
   const mamilah = await get(directorToken, "/pilot-assets/LIC-UHM-001");
