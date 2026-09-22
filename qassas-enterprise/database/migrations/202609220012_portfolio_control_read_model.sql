@@ -41,6 +41,8 @@ SELECT
   cap.state AS capital_state,
   cga.all_required_gates_pass,
   cga.blocking_reasons AS capital_blocking_reasons,
+  COALESCE(caps.released_capital_total, 0) AS released_capital_total,
+  COALESCE(caps.release_count, 0) AS capital_release_count,
 
   CASE
     WHEN d.state IN (
@@ -114,6 +116,16 @@ LEFT JOIN LATERAL (
    WHERE g.capital_request_id = cap.capital_request_id
    ORDER BY created_at DESC, assessment_id DESC
    LIMIT 1
-) cga ON true;
+) cga ON true
+
+LEFT JOIN LATERAL (
+  SELECT
+    COALESCE(sum(cr.released_amount), 0) AS released_capital_total,
+    count(cr.release_id)::int AS release_count
+  FROM qassas_core.capital_release cr
+  JOIN qassas_core.capital_request cq
+    ON cq.capital_request_id = cr.capital_request_id
+  WHERE cq.decision_id = d.decision_id
+) caps ON true;
 
 COMMIT;
