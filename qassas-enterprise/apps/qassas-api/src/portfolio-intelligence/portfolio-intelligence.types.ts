@@ -54,3 +54,45 @@ export interface PortfolioIntelligenceRow {
   priority_rank: string | null;
   score_authorises_execution: boolean;
 }
+
+export interface PortfolioScoreWeights {
+  geological_potential: number;
+  evidence_confidence: number;
+  technical_maturity: number;
+  scale_potential: number;
+  strategic_adjacency: number;
+  cost_to_next_decision: number;
+  work_commitment_risk: number;
+  partner_constraint: number;
+  data_quality: number;
+}
+
+export interface TargetAssessmentDimensions {
+  geological_potential: number;
+  evidence_confidence: number;
+  technical_maturity: number;
+  scale_potential: number;
+  strategic_adjacency: number;
+  cost_to_next_decision: number;
+  work_commitment_risk: number;
+  partner_constraint: number;
+  data_quality: number;
+}
+
+export interface CreateTargetAssessmentCommand {
+  target_id: string;
+  decision_id?: string | null;
+  evidence_snapshot_id?: string | null;
+  recommendation_delta_id?: string | null;
+  trigger_type: string;
+  rationale: string;
+  dimensions: TargetAssessmentDimensions;
+  cost_to_next_decision_sar: number;
+  expected_information_gain: number;
+}
+
+export interface CreateScenarioCommand {
+  scenario_name: string;
+  purpose: string;
+  weights: PortfolioScoreWeights;
+}
