@@ -27,6 +27,21 @@ export class MultiAssetController {
     return this.multiAsset.listWorkflowTemplates(actor);
   }
 
+  @Get("pilot-operations/exploration")
+  explorationDirectorQueue(@CurrentActor() actor: AuthenticatedActor) {
+    return this.multiAsset.explorationDirectorQueue(actor);
+  }
+
+  @Get("pilot-operations/finance")
+  financeQueue(@CurrentActor() actor: AuthenticatedActor) {
+    return this.multiAsset.financeQueue(actor);
+  }
+
+  @Get("pilot-operations/jv")
+  jvReviewQueue(@CurrentActor() actor: AuthenticatedActor) {
+    return this.multiAsset.jvReviewQueue(actor);
+  }
+
   @Get("pilot-decision-queue")
   decisionQueue(@CurrentActor() actor: AuthenticatedActor) {
     return this.multiAsset.decisionQueue(actor);
