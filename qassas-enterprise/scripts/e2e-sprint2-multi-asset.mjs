@@ -292,6 +292,112 @@ async function main() {
     assert.equal(denied.response.status, 404);
   }
 
+  console.log("S2 E2E: open all remaining governed Pilot Decision Objects");
+
+  const pilotDecisionSpecs = [
+    {
+      key: "DO-001",
+      target_id: "TGT-UHM-VMS-001",
+      decision_class: "MRE_READINESS",
+      current_gate: "G7_RESOURCE_DEFINITION",
+      workflow_template_code: "WT-MRE-READINESS",
+      question: "Is Umm Hijlan / Mamilah evidence controlled enough for MRE readiness review?",
+    },
+    {
+      key: "DO-003",
+      target_id: "TGT-AHN-PORT-001",
+      decision_class: "MULTI_TARGET_PORTFOLIO",
+      current_gate: "G2_TARGET_GENERATED",
+      workflow_template_code: "WT-MULTI-TARGET-JV",
+      question: "Which Al Hajar North target should receive the next controlled test under JV constraints?",
+    },
+    {
+      key: "DO-004",
+      target_id: "TGT-AG-GROWTH-001",
+      decision_class: "INCREMENTAL_RESOURCE_VALUE",
+      current_gate: "G8_RESOURCE_GROWTH",
+      workflow_template_code: "WT-RESOURCE-GROWTH-VOI",
+      question: "Does the next Al Godeyer extension test justify its incremental information value?",
+    },
+    {
+      key: "DO-005",
+      target_id: "TGT-JAD-COVERED-001",
+      decision_class: "COVERED_TARGET_TEST",
+      current_gate: "G2_TARGET_GENERATED",
+      workflow_template_code: "WT-COVERED-TARGET-TEST",
+      question: "Which covered-target method should be tested next at Jadib Al Qahtanah?",
+    },
+  ];
+
+  const openedByKey = new Map();
+
+  for (const spec of pilotDecisionSpecs) {
+    const opened = await post(
+      directorToken,
+      "/decisions",
+      {
+        target_id: spec.target_id,
+        decision_class: spec.decision_class,
+        decision_question: spec.question,
+        trigger_type: "SPRINT2_FIVE_ASSET_E2E",
+        current_gate: spec.current_gate,
+      },
+      {
+        "x-qassas-idempotency-key": "S2-" + spec.key + "-OPEN",
+        "x-qassas-correlation-id": "CORR-S2-" + spec.key,
+      },
+    );
+
+    assert.ok(
+      [200, 201].includes(opened.response.status),
+      spec.key + " should open successfully",
+    );
+    assert.equal(opened.body.decision_class, spec.decision_class);
+    assert.equal(opened.body.current_gate, spec.current_gate);
+    assert.equal(
+      opened.body.workflow_template_code,
+      spec.workflow_template_code,
+    );
+    assert.equal(opened.body.state, "CREATED");
+    openedByKey.set(spec.key, opened.body.decision_id);
+  }
+
+  const liveQueue = await get(directorToken, "/pilot-decision-queue");
+  assert.equal(liveQueue.response.status, 200);
+  assert.equal(liveQueue.body.visible_asset_count, 5);
+
+  const liveByKey = new Map(
+    liveQueue.body.decisions.map((item) => [item.decision_object_key, item]),
+  );
+
+  for (const spec of pilotDecisionSpecs) {
+    const item = liveByKey.get(spec.key);
+    assert.ok(item, spec.key + " must exist in live queue");
+    assert.equal(item.decision_id, openedByKey.get(spec.key));
+    assert.equal(item.decision_state, "CREATED");
+    assert.equal(item.decision_gate, spec.current_gate);
+    assert.notEqual(item.queue_state, "NOT_STARTED");
+  }
+
+  const abuSalalLive = liveByKey.get("DO-002");
+  assert.ok(abuSalalLive);
+  assert.ok(
+    abuSalalLive.decision_id,
+    "DO-002 Abu Salal must remain live through Sprint 0/1 regression flow",
+  );
+
+  assert.equal(
+    [...liveByKey.values()].filter((item) => item.decision_id !== null).length,
+    5,
+    "all five Pilot Decision Objects must have a live governed Decision context",
+  );
+
+  console.log("S2 E2E: Mamilah remains a separate governed target");
+  const mamilah = await get(directorToken, "/pilot-assets/LIC-UHM-001");
+  assert.equal(mamilah.response.status, 200);
+  assert.equal(mamilah.body.primary_target_id, "TGT-UHM-VMS-001");
+  assert.deepEqual(mamilah.body.secondary_target_ids, ["TGT-MAM-GOLD-001"]);
+
   console.log("S2 E2E: stage-specific Pilot workflow enforcement");
   const wrongGate = await post(
     directorToken,
@@ -311,25 +417,11 @@ async function main() {
   assert.equal(wrongGate.response.status, 409);
   assert.equal(wrongGate.body.code, "QAS-PILOT-WORKFLOW-MISMATCH");
 
-  const correctJadib = await post(
-    directorToken,
-    "/decisions",
-    {
-      target_id: "TGT-JAD-COVERED-001",
-      decision_class: "COVERED_TARGET_TEST",
-      decision_question: "Which covered-target method should be tested next?",
-      trigger_type: "SPRINT2_STAGE_VALIDATION",
-      current_gate: "G2_TARGET_GENERATED",
-    },
-    {
-      "x-qassas-idempotency-key": "S2-JAD-CORRECT",
-      "x-qassas-correlation-id": "CORR-S2-JAD-CORRECT",
-    },
-  );
-  assert.ok([200, 201].includes(correctJadib.response.status));
-  assert.equal(correctJadib.body.workflow_template_code, "WT-COVERED-TARGET-TEST");
-  assert.equal(correctJadib.body.decision_class, "COVERED_TARGET_TEST");
-  assert.equal(correctJadib.body.current_gate, "G2_TARGET_GENERATED");
+  const jadibLive = liveByKey.get("DO-005");
+  assert.ok(jadibLive);
+  assert.equal(jadibLive.decision_id, openedByKey.get("DO-005"));
+  assert.equal(jadibLive.decision_class, "COVERED_TARGET_TEST");
+  assert.equal(jadibLive.decision_gate, "G2_TARGET_GENERATED");
 
   console.log("E2E-S2-MULTI-ASSET-001 PASS");
 }
