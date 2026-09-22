@@ -48,6 +48,13 @@ interface TargetScopeRow {
   security_class: string;
 }
 
+interface PilotProfileRow {
+  decision_class: string;
+  configured_gate: string;
+  workflow_template_code: string;
+  template_active: boolean;
+}
+
 interface IdempotencyRow {
   request_hash: string;
   result_payload: Record<string, unknown>;
@@ -143,6 +150,28 @@ export class DecisionService {
       throw new ForbiddenException({ code: "QAS-AUTH-DENIED" });
     }
 
+    const pilotProfile = await this.pilotProfileForTarget(command.target_id);
+    if (pilotProfile) {
+      if (!pilotProfile.template_active) {
+        throw new ConflictException({
+          code: "QAS-PILOT-WORKFLOW-INACTIVE",
+          workflow_template_code: pilotProfile.workflow_template_code,
+        });
+      }
+
+      if (
+        command.decision_class !== pilotProfile.decision_class ||
+        command.current_gate !== pilotProfile.configured_gate
+      ) {
+        throw new ConflictException({
+          code: "QAS-PILOT-WORKFLOW-MISMATCH",
+          expected_decision_class: pilotProfile.decision_class,
+          expected_gate: pilotProfile.configured_gate,
+          workflow_template_code: pilotProfile.workflow_template_code,
+        });
+      }
+    }
+
     const requestHash = this.hash(command);
     return this.database.transaction(async (client) => {
       const existing = await this.idempotentResult(
@@ -188,6 +217,8 @@ export class DecisionService {
           decision_question: command.decision_question,
           trigger_type: command.trigger_type,
           current_gate: command.current_gate,
+          workflow_template_code:
+            pilotProfile?.workflow_template_code ?? null,
         },
       });
 
@@ -202,6 +233,8 @@ export class DecisionService {
         decision_version: 1,
         object_version: 1,
         created_by_user_id: actor.userId,
+        workflow_template_code:
+          pilotProfile?.workflow_template_code ?? null,
       };
 
       await this.storeIdempotency(
@@ -752,6 +785,26 @@ export class DecisionService {
         WHERE review_id = $1`,
       [reviewId],
     );
+  }
+
+  private async pilotProfileForTarget(
+    targetId: string,
+  ): Promise<PilotProfileRow | null> {
+    const result = await this.database.query<PilotProfileRow>(
+      [
+        "SELECT p.decision_class, p.configured_gate,",
+        "       p.workflow_template_code, wt.active AS template_active",
+        "  FROM qassas_core.pilot_asset_profile p",
+        "  JOIN qassas_core.workflow_template wt",
+        "    ON wt.template_code = p.workflow_template_code",
+        " WHERE p.primary_target_id = $1",
+        "    OR p.secondary_target_ids @> jsonb_build_array($1::text)",
+        " ORDER BY p.display_order",
+        " LIMIT 1",
+      ].join(" "),
+      [targetId],
+    );
+    return result.rows[0] ?? null;
   }
 
   private async authorizeDecisionAction(
