@@ -6,8 +6,8 @@
 **Pilot:** QASSAS × GMCO Enterprise Exploration Portfolio Pilot  
 **Branch:** `qassas/sprint-1-governed-pilot-core`  
 **Draft PR:** #12 — QASSAS Sprint 1 — Governed Pilot Core  
-**Acceptance Run:** QASSAS Sprint 1 Governed Core CI — Run #276  
-**Run ID:** `35681392107`  
+**Acceptance Run:** QASSAS Sprint 1 Governed Core CI — Run #286  
+**Run ID:** `35682140588`  
 **Decision Date:** 2026-09-22
 
 ---
@@ -63,7 +63,7 @@ Sprint 1 now includes:
 
 # 3. ACCEPTANCE RUN
 
-GitHub Actions Run #276:
+GitHub Actions Run #286:
 
 | Gate | Result |
 |---|---|
@@ -74,16 +74,17 @@ GitHub Actions Run #276:
 | E2E-BF01-001 | PASS |
 | E2E-S1-EVIDENCE-001 | PASS |
 | E2E-S1-RECOMMENDATION-001 | PASS |
+| E2E-S1-RIGHTS-001 | PASS |
 | E2E-S1-CAPITAL-001 | PASS |
 | E2E-S1-CONTROL-001 | PASS |
 
 Foundation Job ID:
 
-`106598901948`
+`106601158769`
 
 Integrated E2E Job ID:
 
-`106599016708`
+`106601261085`
 
 ---
 
@@ -106,7 +107,7 @@ Example acceptance reference:
 
 Blocked Decision:
 
-`DEC-318e385b-6851-478b-9ee2-7d334b21cd52`
+`DEC-8b1a4fa4-474d-4869-9135-a11c18aac6c3`
 
 ---
 
@@ -126,9 +127,9 @@ Proven controls:
 
 ---
 
-# 6. RIGHTS / JV / COMMITMENT GOVERNANCE — ACCEPTED AS INTEGRATED CONTROL
+# 6. RIGHTS / JV / COMMITMENT GOVERNANCE — ACCEPTED — DEDICATED E2E PASS
 
-The rights layer is now integrated into the governed decision chain.
+The rights layer is integrated into the governed decision chain and has now passed a dedicated **Al Hajar North Rights/JV E2E**.
 
 It maintains separation of:
 
@@ -145,11 +146,30 @@ Constraint assessment evaluates:
 - evidence blockers;
 - technical Decision state.
 
-A technically valid decision may therefore remain:
+The dedicated proof demonstrated:
 
-`PARTNER_APPROVAL_REQUIRED`
+**DECISION_READY  
+→ unresolved JV reserved matter  
+→ PARTNER_APPROVAL_REQUIRED  
+→ explicit Partner Consent  
+→ DECISION_READY**
 
-or otherwise blocked from execution.
+while keeping work-commitment risk independent and visible.
+
+The same test proved that a 60-day mandatory work commitment produced:
+
+`WC-2_90D`
+
+and prevented portfolio optimisation until the commitment was explicitly marked `SATISFIED`.
+
+Accepted Rights/JV references:
+
+- Licence: `LIC-AHN-001`
+- JV Constraint: `JVC-88d2317b-ff19-4c13-8786-689e7254f419`
+- Work Commitment: `WCM-004da95d-e783-4e71-b24d-dedbdfef720d`
+- Decision: `DEC-AHN-35682140588`
+
+The dedicated test also proved that System Admin cannot read business rights and that a JV Partner cannot infer an unrelated asset.
 
 ---
 
@@ -187,15 +207,15 @@ Accepted E2E references:
 
 Released Decision Capital Request:
 
-`CAP-621a0d8e-948f-4c80-8d97-108e3e68a059`
+`CAP-e9fef7f2-3fee-4aba-8377-6a2706caa7b8`
 
 Threshold-Blocked Request:
 
-`CAP-4610ba35-4ccd-4448-87f0-e16d6b87235e`
+`CAP-a4f911de-f3d7-42be-8442-af8ca29371c2`
 
 JV/Rights-Blocked Execution Request:
 
-`CAP-84d345ac-093a-4eed-bd9f-fa3bb5c1be07`
+`CAP-82261bd2-36e1-4e02-95c6-b58d336ccfe8`
 
 The accepted E2E released:
 
@@ -234,7 +254,7 @@ Accepted Control E2E reference:
 
 Funded Decision:
 
-`DEC-CAP-35681392107`
+`DEC-CAP-35682140588`
 
 Released Capital Total:
 
@@ -357,7 +377,7 @@ They continue to block TEST/UAT/Pilot deployment.
 
 ## Recommendation / NBT Governance: PASS
 
-## Rights / JV Constraint Integration: PASS
+## Rights / JV / Commitment Governance — Dedicated E2E: PASS
 
 ## Capital Governance: PASS
 
