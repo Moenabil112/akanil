@@ -151,6 +151,13 @@ jobs:
           set +a
           npm run e2e:sprint1-capital
 
+      - name: Execute E2E-S1-CONTROL-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint1-control
+
       - name: Show diagnostics
         if: failure()
         run: |
