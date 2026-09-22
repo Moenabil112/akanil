@@ -139,6 +139,33 @@ export class OpaPolicyService {
     });
   }
 
+  canActOnRights(
+    actor: AuthenticatedActor,
+    action:
+      | "register_licence"
+      | "add_party_role"
+      | "define_jv_constraint"
+      | "record_consent"
+      | "create_work_commitment"
+      | "update_work_commitment"
+      | "assess_constraints"
+      | "read_rights",
+    object: {
+      assetId: string;
+      jvId?: string | null;
+    },
+  ): Promise<PolicyDecision> {
+    return this.evaluate("qassas/rights", {
+      action,
+      subject: this.subject(actor),
+      object: {
+        object_type: "RightsGovernance",
+        asset_id: object.assetId,
+        jv_id: object.jvId ?? null,
+      },
+    });
+  }
+
   canActOnDecision(
     actor: AuthenticatedActor,
     action:
