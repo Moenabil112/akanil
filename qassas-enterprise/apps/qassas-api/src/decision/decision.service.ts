@@ -66,6 +66,16 @@ interface ReviewWorkflowStateRow {
   reviewer_role_assignment_id: string | null;
 }
 
+interface SnapshotBindingRow {
+  snapshot_id: string;
+  target_id: string;
+  snapshot_status: string;
+}
+
+interface CountRow {
+  count: number;
+}
+
 @Injectable()
 export class DecisionService {
   constructor(
@@ -198,6 +208,187 @@ export class DecisionService {
         client,
         actor.userId,
         "OpenDecision",
+        idempotencyKey,
+        requestHash,
+        result,
+      );
+
+      return result;
+    });
+  }
+
+  async bindEvidenceSnapshot(
+    decisionId: string,
+    actor: AuthenticatedActor,
+    snapshotId: string,
+    expectedVersion: number,
+    idempotencyKey: string,
+    correlationId: string,
+  ) {
+    if (!snapshotId?.trim()) {
+      throw new BadRequestException("snapshot_id is required");
+    }
+
+    const context = await this.requireDecisionContext(decisionId);
+    await this.authorizeDecisionAction(
+      actor,
+      "bind_evidence",
+      context,
+      correlationId,
+    );
+
+    const requestHash = this.hash({
+      decisionId,
+      snapshotId,
+      expectedVersion,
+    });
+
+    return this.database.transaction(async (client) => {
+      const existing = await this.idempotentResult(
+        client,
+        actor.userId,
+        "BindEvidenceSnapshot",
+        idempotencyKey,
+        requestHash,
+      );
+      if (existing) return existing;
+
+      const current = await this.lockContext(client, decisionId);
+      this.ensureVersion(current, expectedVersion);
+
+      if (
+        ![
+          "CREATED",
+          "EVIDENCE_REQUESTED",
+          "EVIDENCE_RECEIVED",
+          "EVIDENCE_ASSESSMENT",
+          "EVIDENCE_REQUIRED",
+          "CONFLICT_RESOLUTION_REQUIRED",
+          "DECISION_READY",
+        ].includes(current.state)
+      ) {
+        throw new ConflictException({
+          code: "QAS-INVALID-STATE-TRANSITION",
+        });
+      }
+
+      const snapshot = await client.query<SnapshotBindingRow>(
+        `SELECT snapshot_id, target_id, snapshot_status
+           FROM qassas_core.evidence_snapshot
+          WHERE snapshot_id = $1
+            AND target_id = $2
+          LIMIT 1`,
+        [snapshotId, current.target_id],
+      );
+      const snapshotRow = snapshot.rows[0];
+      if (!snapshotRow) {
+        throw new BadRequestException(
+          "snapshot_id must reference a snapshot for the same target",
+        );
+      }
+      if (snapshotRow.snapshot_status !== "LOCKED") {
+        throw new ConflictException({
+          code: "QAS-EVIDENCE-SNAPSHOT-NOT-LOCKED",
+        });
+      }
+
+      const blockingConflicts = await client.query<CountRow>(
+        `SELECT count(*)::int AS count
+           FROM qassas_core.evidence_conflict
+          WHERE target_id = $1
+            AND severity IN ('CF-4','CF-5')
+            AND status IN (
+              'OPEN',
+              'UNDER_REVIEW',
+              'RESOLUTION_TEST_REQUIRED'
+            )
+            AND (decision_id IS NULL OR decision_id = $2)`,
+        [current.target_id, decisionId],
+      );
+
+      const blockingGaps = await client.query<CountRow>(
+        `SELECT count(*)::int AS count
+           FROM qassas_core.data_gap
+          WHERE target_id = $1
+            AND blocking_status = 'BLOCKING'
+            AND status = 'OPEN'
+            AND (decision_id IS NULL OR decision_id = $2)`,
+        [current.target_id, decisionId],
+      );
+
+      const conflictCount = Number(blockingConflicts.rows[0]?.count ?? 0);
+      const gapCount = Number(blockingGaps.rows[0]?.count ?? 0);
+
+      const derivedState =
+        conflictCount > 0
+          ? "CONFLICT_RESOLUTION_REQUIRED"
+          : gapCount > 0
+            ? "EVIDENCE_REQUIRED"
+            : "DECISION_READY";
+
+      const nextVersion = Number(current.object_version) + 1;
+      await client.query(
+        `UPDATE qassas_core.decision_object
+            SET evidence_snapshot_id = $2,
+                state = $3,
+                object_version = $4,
+                updated_at = now()
+          WHERE decision_id = $1`,
+        [decisionId, snapshotId, derivedState, nextVersion],
+      );
+
+      const bindingId = `DEB-${randomUUID()}`;
+      await client.query(
+        `INSERT INTO qassas_core.decision_evidence_binding (
+           binding_id, decision_id, snapshot_id, decision_object_version,
+           bound_by_user_id, derived_state, blocking_gap_count,
+           blocking_conflict_count
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [
+          bindingId,
+          decisionId,
+          snapshotId,
+          nextVersion,
+          actor.userId,
+          derivedState,
+          gapCount,
+          conflictCount,
+        ],
+      );
+
+      await this.events.write(client, {
+        eventType: "DecisionEvidenceBound",
+        objectType: "DecisionObject",
+        objectId: decisionId,
+        objectVersion: nextVersion,
+        actorId: actor.userId,
+        actorRole: this.actorRole(actor),
+        tenantId: current.enterprise_id,
+        correlationId,
+        previousState: current.state,
+        newState: derivedState,
+        payload: {
+          binding_id: bindingId,
+          snapshot_id: snapshotId,
+          blocking_gap_count: gapCount,
+          blocking_conflict_count: conflictCount,
+        },
+      });
+
+      const result = {
+        decision_id: decisionId,
+        binding_id: bindingId,
+        evidence_snapshot_id: snapshotId,
+        state: derivedState,
+        blocking_gap_count: gapCount,
+        blocking_conflict_count: conflictCount,
+        object_version: nextVersion,
+      };
+
+      await this.storeIdempotency(
+        client,
+        actor.userId,
+        "BindEvidenceSnapshot",
         idempotencyKey,
         requestHash,
         result,
@@ -565,7 +756,7 @@ export class DecisionService {
 
   private async authorizeDecisionAction(
     actor: AuthenticatedActor,
-    action: "request_review" | "approve" | "reject",
+    action: "bind_evidence" | "request_review" | "approve" | "reject",
     context: DecisionContextRow,
     correlationId: string,
   ) {
