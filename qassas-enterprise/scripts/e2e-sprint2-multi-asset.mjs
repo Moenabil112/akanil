@@ -224,6 +224,59 @@ async function main() {
   assert.equal(financeAssets.response.status, 200);
   assert.equal(financeAssets.body.visible_asset_count, 5);
 
+  console.log("S2 E2E: Exploration Director operational interface");
+  const explorationOps = await get(
+    directorToken,
+    "/pilot-operations/exploration",
+  );
+  assert.equal(explorationOps.response.status, 200);
+  assert.equal(explorationOps.body.interface, "EXPLORATION_DIRECTOR");
+  assert.equal(explorationOps.body.visible_asset_count, 5);
+  assert.deepEqual(
+    explorationOps.body.assets.map((asset) => asset.decision_object_key),
+    ["DO-001", "DO-002", "DO-003", "DO-004", "DO-005"],
+  );
+  for (const asset of explorationOps.body.assets) {
+    assert.equal(typeof asset.next_controlled_action, "string");
+    assert.ok(asset.next_controlled_action.length > 0);
+  }
+
+  console.log("S2 E2E: Finance operational minimisation");
+  const financeOps = await get(financeToken, "/pilot-operations/finance");
+  assert.equal(financeOps.response.status, 200);
+  assert.equal(financeOps.body.interface, "FINANCE");
+  assert.equal(financeOps.body.visible_asset_count, 5);
+  for (const asset of financeOps.body.assets) {
+    assert.equal(Object.hasOwn(asset, "evidence"), false);
+    assert.equal(Object.hasOwn(asset, "blocking_gap_count"), false);
+    assert.equal(Object.hasOwn(asset, "blocking_conflict_count"), false);
+    assert.equal(Object.hasOwn(asset, "recommendation_id"), false);
+    assert.equal(Object.hasOwn(asset, "capital_state"), true);
+  }
+
+  console.log("S2 E2E: JV operational anti-inference and field minimisation");
+  const jvOps = await get(partnerToken, "/pilot-operations/jv");
+  assert.equal(jvOps.response.status, 200);
+  assert.equal(jvOps.body.interface, "JV_REVIEW");
+  assert.equal(jvOps.body.visible_asset_count, 1);
+  assert.equal(jvOps.body.assets.length, 1);
+  assert.equal(jvOps.body.assets[0].asset_id, "LIC-AHN-001");
+  assert.equal(jvOps.body.assets[0].decision_object_key, "DO-003");
+  assert.equal(Object.hasOwn(jvOps.body.assets[0], "capital_state"), false);
+  assert.equal(Object.hasOwn(jvOps.body.assets[0], "requested_amount"), false);
+  assert.ok(Array.isArray(jvOps.body.assets[0].reserved_matters));
+  assert.ok(jvOps.body.assets[0].reserved_matters.length >= 1);
+
+  console.log("S2 E2E: System Admin denied operational business interfaces");
+  for (const path of [
+    "/pilot-operations/exploration",
+    "/pilot-operations/finance",
+    "/pilot-operations/jv",
+  ]) {
+    const denied = await get(adminUserToken, path);
+    assert.equal(denied.response.status, 404);
+  }
+
   console.log("E2E-S2-MULTI-ASSET-001 PASS");
 }
 
