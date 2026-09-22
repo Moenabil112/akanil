@@ -1,4 +1,4 @@
-name: QASSAS Sprint 1 Governed Core CI
+name: QASSAS Sprint 2 Multi-Asset Pilot CI
 
 on:
   push:
@@ -90,13 +90,14 @@ jobs:
 
           npm run temporal:wait
 
-      - name: Apply canonical migrations and Abu Salal seed
+      - name: Apply canonical migrations and Pilot seeds
         run: |
           set -a
           source .env
           set +a
           npm run db:migrate
           npm run db:seed:abu-salal
+          npm run db:seed:sprint2
 
       - name: Start Temporal worker and QASSAS API
         run: |
@@ -164,6 +165,13 @@ jobs:
           source .env
           set +a
           npm run e2e:sprint1-control
+
+      - name: Execute E2E-S2-MULTI-ASSET-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:sprint2-multi-asset
 
       - name: Show diagnostics
         if: failure()
