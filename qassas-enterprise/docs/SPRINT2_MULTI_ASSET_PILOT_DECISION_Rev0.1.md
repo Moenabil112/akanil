@@ -7,9 +7,9 @@
 **Sprint:** Sprint 2 — Multi-Asset Pilot Expansion & Operational Interfaces  
 **Branch:** `qassas/sprint-2-multi-asset-pilot`  
 **Draft PR:** #41  
-**Acceptance Run:** QASSAS Sprint 2 Multi-Asset Pilot CI — Run #327  
-**Run ID:** `35747057351`  
-**Accepted Code Head:** `870d7a015ae2659ceab5755fc2f7e6539c74047a`  
+**Acceptance Run:** QASSAS Sprint 2 Multi-Asset Pilot CI — Run #330  
+**Run ID:** `35747468324`  
+**Accepted Code Head:** `580a42887b1904d3f859cf1bab2d1046a3f53877`  
 **Decision Date:** 2026-09-22
 
 ---
@@ -160,7 +160,7 @@ Acceptance proved:
 
 # 6. CURRENT-HEAD CI ACCEPTANCE
 
-Run #327 completed successfully.
+Run #330 completed successfully on the current Sprint 2 PR head.
 
 ## Foundation
 - Install — PASS
