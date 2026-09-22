@@ -2,8 +2,8 @@ package qassas.recommendation_test
 
 import data.qassas.recommendation
 
-subject(role_type, asset_scope) := {
-  "user_id": "USR-TEST",
+subject(user_id, role_type, asset_scope) := {
+  "user_id": user_id,
   "role_assignments": [{
     "role_type": role_type,
     "status": "ACTIVE",
@@ -16,13 +16,18 @@ subject(role_type, asset_scope) := {
 
 object := {
   "asset_id": "LIC-ABUSALAL-001",
-  "decision_class": "DISCOVERY_REVIEW"
+  "decision_class": "DISCOVERY_REVIEW",
+  "recommendation_created_by_user_id": "USR-GEO-001"
 }
 
 test_geologist_can_propose_next_best_test if {
   result := recommendation.decision with input as {
     "action": "propose_test",
-    "subject": subject("SENIOR_GEOLOGIST", ["LIC-ABUSALAL-001"]),
+    "subject": subject(
+      "USR-GEO-001",
+      "SENIOR_GEOLOGIST",
+      ["LIC-ABUSALAL-001"]
+    ),
     "object": object
   }
   result.allow == true
@@ -31,7 +36,11 @@ test_geologist_can_propose_next_best_test if {
 test_director_can_issue_recommendation if {
   result := recommendation.decision with input as {
     "action": "issue_recommendation",
-    "subject": subject("EXPLORATION_DIRECTOR", ["LIC-ABUSALAL-001"]),
+    "subject": subject(
+      "USR-EXP-001",
+      "EXPLORATION_DIRECTOR",
+      ["LIC-ABUSALAL-001"]
+    ),
     "object": object
   }
   result.allow == true
@@ -40,7 +49,11 @@ test_director_can_issue_recommendation if {
 test_system_admin_cannot_issue_recommendation if {
   result := recommendation.decision with input as {
     "action": "issue_recommendation",
-    "subject": subject("SYSTEM_ADMIN", ["LIC-ABUSALAL-001"]),
+    "subject": subject(
+      "USR-ADMIN-001",
+      "SYSTEM_ADMIN",
+      ["LIC-ABUSALAL-001"]
+    ),
     "object": object
   }
   result.allow == false
@@ -49,8 +62,38 @@ test_system_admin_cannot_issue_recommendation if {
 test_partner_cannot_create_candidate_action if {
   result := recommendation.decision with input as {
     "action": "create_action",
-    "subject": subject("PARTNER_USER", ["LIC-ABUSALAL-001"]),
+    "subject": subject(
+      "USR-PARTNER-001",
+      "PARTNER_USER",
+      ["LIC-ABUSALAL-001"]
+    ),
     "object": object
   }
   result.allow == false
+}
+
+test_creator_cannot_review_own_recommendation if {
+  result := recommendation.decision with input as {
+    "action": "review_recommendation",
+    "subject": subject(
+      "USR-GEO-001",
+      "EXPLORATION_DIRECTOR",
+      ["LIC-ABUSALAL-001"]
+    ),
+    "object": object
+  }
+  result.allow == false
+}
+
+test_director_can_review_another_authors_recommendation if {
+  result := recommendation.decision with input as {
+    "action": "review_recommendation",
+    "subject": subject(
+      "USR-EXP-001",
+      "EXPLORATION_DIRECTOR",
+      ["LIC-ABUSALAL-001"]
+    ),
+    "object": object
+  }
+  result.allow == true
 }
