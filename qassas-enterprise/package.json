@@ -14,7 +14,8 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:seed:abu-salal": "node scripts/seed-abu-salal.mjs",
     "e2e:abu-salal": "node scripts/e2e-abu-salal.mjs",
-    "temporal:wait": "node scripts/wait-temporal.mjs"
+    "temporal:wait": "node scripts/wait-temporal.mjs",
+    "e2e:sprint1-evidence": "node scripts/e2e-sprint1-evidence.mjs"
   },
   "engines": {
     "node": ">=22"
