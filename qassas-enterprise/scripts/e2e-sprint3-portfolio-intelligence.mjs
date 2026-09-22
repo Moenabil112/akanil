@@ -231,13 +231,15 @@ async function main() {
   );
 
   const boardCapitalBefore = JSON.stringify(
-    boardBefore.body.priority_queue.map((asset) => ({
-      key: asset.decision_object_key,
-      gate: asset.configured_gate,
-      decision_state: asset.decision_state,
-      capital_state: asset.capital.state,
-      released_total: asset.capital.released_total,
-    })),
+    boardBefore.body.priority_queue
+      .map((asset) => ({
+        key: asset.decision_object_key,
+        gate: asset.configured_gate,
+        decision_state: asset.decision_state,
+        capital_state: asset.capital.state,
+        released_total: asset.capital.released_total,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key)),
   );
 
   console.log("S3 E2E: governed Priority Assessment versioning");
@@ -318,13 +320,15 @@ async function main() {
   assert.equal(boardAfter.response.status, 200);
 
   const boardCapitalAfter = JSON.stringify(
-    boardAfter.body.priority_queue.map((asset) => ({
-      key: asset.decision_object_key,
-      gate: asset.configured_gate,
-      decision_state: asset.decision_state,
-      capital_state: asset.capital.state,
-      released_total: asset.capital.released_total,
-    })),
+    boardAfter.body.priority_queue
+      .map((asset) => ({
+        key: asset.decision_object_key,
+        gate: asset.configured_gate,
+        decision_state: asset.decision_state,
+        capital_state: asset.capital.state,
+        released_total: asset.capital.released_total,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key)),
   );
   assert.equal(boardCapitalAfter, boardCapitalBefore);
 
