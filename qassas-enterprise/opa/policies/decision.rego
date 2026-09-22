@@ -39,6 +39,10 @@ final_reviewer_role(ra) if {
   ra.role_type == "EXPLORATION_DIRECTOR"
 }
 
+final_reviewer_role(ra) if {
+  ra.role_type == "RESOURCE_GEOLOGIST_CP"
+}
+
 base_scope(ra) if {
   active_role(ra)
   business_role(ra)
