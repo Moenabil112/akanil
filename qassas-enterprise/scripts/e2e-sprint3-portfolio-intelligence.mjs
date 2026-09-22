@@ -368,6 +368,122 @@ async function main() {
   assert.equal(asset.body.dimensions.cost_efficiency, 90);
   assert.equal(asset.body.voi_position, 1);
 
+  console.log("S3 E2E: governed versioned reprioritisation");
+  const jadBeforeReassessment = queue.body.assets.find(
+    (item) => item.decision_object_key === "DO-005",
+  );
+  assert.ok(jadBeforeReassessment);
+
+  const governedJadBefore = JSON.stringify({
+    gate: jadBeforeReassessment.configured_gate,
+    decision_state: jadBeforeReassessment.decision_state,
+    capital_state: jadBeforeReassessment.capital.state,
+    released_total: jadBeforeReassessment.capital.released_total,
+  });
+
+  const newAssessmentBody = {
+    asset_id: "LIC-JADIB-001",
+    geological_potential: 90,
+    evidence_confidence: 85,
+    technical_maturity: 80,
+    scale_potential: 85,
+    strategic_adjacency: 80,
+    cost_efficiency: 90,
+    data_quality: 85,
+    work_commitment_risk: 20,
+    partner_constraint: 10,
+    next_decision_cost_sar: 300000,
+    expected_information_gain_points: 32,
+    rationale:
+      "Sprint 3 controlled reassessment: improved evidence confidence while retaining covered-target stage controls.",
+  };
+  const assessmentHeaders = {
+    "x-qassas-idempotency-key": "S3-PPI-JADIB-V2-001",
+    "x-qassas-correlation-id": "CORR-S3-PPI-JADIB-V2-001",
+  };
+
+  const createdAssessment = await post(
+    portfolioToken,
+    "/portfolio-intelligence/assessments",
+    newAssessmentBody,
+    assessmentHeaders,
+  );
+  assert.ok([200, 201].includes(createdAssessment.response.status));
+  assert.equal(createdAssessment.body.asset_id, "LIC-JADIB-001");
+  assert.equal(createdAssessment.body.model_version, "PPI-0.1");
+  assert.equal(createdAssessment.body.assessment_version, 2);
+  assert.equal(
+    createdAssessment.body.supersedes_assessment_id,
+    "PPA-JAD-001",
+  );
+  assert.equal(createdAssessment.body.score_authority, "ADVISORY_ONLY");
+  assert.equal(createdAssessment.body.score_can_authorise_execution, false);
+  assert.equal(createdAssessment.body.score_can_release_capital, false);
+  assert.equal(createdAssessment.body.score_can_change_gate, false);
+
+  const duplicateAssessment = await post(
+    portfolioToken,
+    "/portfolio-intelligence/assessments",
+    newAssessmentBody,
+    assessmentHeaders,
+  );
+  assert.ok([200, 201].includes(duplicateAssessment.response.status));
+  assert.equal(
+    duplicateAssessment.body.assessment_id,
+    createdAssessment.body.assessment_id,
+  );
+
+  const assessmentHistory = await get(
+    portfolioToken,
+    "/portfolio-intelligence/assets/LIC-JADIB-001/assessments",
+  );
+  assert.equal(assessmentHistory.response.status, 200);
+  assert.ok(assessmentHistory.body.assessment_count >= 2);
+  assert.equal(assessmentHistory.body.assessments[0].assessment_version, 2);
+  assert.equal(assessmentHistory.body.assessments[0].immutable, true);
+  assert.equal(
+    assessmentHistory.body.assessments[0].supersedes_assessment_id,
+    "PPA-JAD-001",
+  );
+
+  const directorAssessmentHistory = await get(
+    directorToken,
+    "/portfolio-intelligence/assets/LIC-JADIB-001/assessments",
+  );
+  assert.equal(directorAssessmentHistory.response.status, 200);
+
+  for (const token of [partnerToken, adminUserToken]) {
+    const deniedHistory = await get(
+      token,
+      "/portfolio-intelligence/assets/LIC-JADIB-001/assessments",
+    );
+    assert.equal(deniedHistory.response.status, 404);
+  }
+
+  const reprioritisedQueue = await get(
+    portfolioToken,
+    "/portfolio-intelligence/priority-queue",
+  );
+  assert.equal(reprioritisedQueue.response.status, 200);
+  const jadAfterReassessment = reprioritisedQueue.body.assets.find(
+    (item) => item.decision_object_key === "DO-005",
+  );
+  assert.ok(jadAfterReassessment);
+  assert.equal(jadAfterReassessment.priority_position, 1);
+  assert.ok(jadAfterReassessment.priority.priority_index > 80);
+  assert.equal(
+    jadAfterReassessment.advisory_action.class,
+    "SELECTIVE_VALIDATION",
+  );
+
+  const governedJadAfter = JSON.stringify({
+    gate: jadAfterReassessment.configured_gate,
+    decision_state: jadAfterReassessment.decision_state,
+    capital_state: jadAfterReassessment.capital.state,
+    released_total: jadAfterReassessment.capital.released_total,
+  });
+  assert.equal(governedJadAfter, governedJadBefore);
+
   console.log("S3 E2E: Recommendation Delta change intelligence");
   const changeFeed = await get(
     portfolioToken,
