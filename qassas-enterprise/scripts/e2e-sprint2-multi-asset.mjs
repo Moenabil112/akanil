@@ -100,6 +100,21 @@ async function get(token, path) {
   return { response, body };
 }
 
+async function post(token, path, body, headers = {}) {
+  const response = await fetch(apiBase + path, {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + token,
+      "content-type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  const parsed = text ? JSON.parse(text) : null;
+  return { response, body: parsed };
+}
+
 async function main() {
   const password = "s2-" + randomBytes(18).toString("hex");
   const admin = await adminToken();
@@ -276,6 +291,45 @@ async function main() {
     const denied = await get(adminUserToken, path);
     assert.equal(denied.response.status, 404);
   }
+
+  console.log("S2 E2E: stage-specific Pilot workflow enforcement");
+  const wrongGate = await post(
+    directorToken,
+    "/decisions",
+    {
+      target_id: "TGT-JAD-COVERED-001",
+      decision_class: "COVERED_TARGET_TEST",
+      decision_question: "Which covered-target method should be tested next?",
+      trigger_type: "SPRINT2_STAGE_VALIDATION",
+      current_gate: "G5_DRILL_READY",
+    },
+    {
+      "x-qassas-idempotency-key": "S2-JAD-WRONG-GATE",
+      "x-qassas-correlation-id": "CORR-S2-JAD-WRONG-GATE",
+    },
+  );
+  assert.equal(wrongGate.response.status, 409);
+  assert.equal(wrongGate.body.code, "QAS-PILOT-WORKFLOW-MISMATCH");
+
+  const correctJadib = await post(
+    directorToken,
+    "/decisions",
+    {
+      target_id: "TGT-JAD-COVERED-001",
+      decision_class: "COVERED_TARGET_TEST",
+      decision_question: "Which covered-target method should be tested next?",
+      trigger_type: "SPRINT2_STAGE_VALIDATION",
+      current_gate: "G2_TARGET_GENERATED",
+    },
+    {
+      "x-qassas-idempotency-key": "S2-JAD-CORRECT",
+      "x-qassas-correlation-id": "CORR-S2-JAD-CORRECT",
+    },
+  );
+  assert.ok([200, 201].includes(correctJadib.response.status));
+  assert.equal(correctJadib.body.workflow_template_code, "WT-COVERED-TARGET-TEST");
+  assert.equal(correctJadib.body.decision_class, "COVERED_TARGET_TEST");
+  assert.equal(correctJadib.body.current_gate, "G2_TARGET_GENERATED");
 
   console.log("E2E-S2-MULTI-ASSET-001 PASS");
 }
