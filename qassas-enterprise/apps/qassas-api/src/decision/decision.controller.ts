@@ -45,6 +45,25 @@ export class DecisionController {
     );
   }
 
+  @Post(":id/evidence-snapshot")
+  bindEvidenceSnapshot(
+    @Param("id") decisionId: string,
+    @Body() body: { snapshot_id?: string },
+    @CurrentActor() actor: AuthenticatedActor,
+    @Headers("if-match") ifMatch?: string,
+    @Headers("x-qassas-idempotency-key") idempotencyKey?: string,
+    @Headers("x-qassas-correlation-id") correlationId?: string,
+  ) {
+    return this.decisions.bindEvidenceSnapshot(
+      decisionId,
+      actor,
+      body.snapshot_id ?? "",
+      this.expectedVersion(ifMatch),
+      this.requireIdempotency(idempotencyKey),
+      correlationId || `CORR-${randomUUID()}`,
+    );
+  }
+
   @Post(":id/reviews")
   requestReview(
     @Param("id") decisionId: string,
