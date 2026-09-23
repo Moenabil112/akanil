@@ -1,0 +1,69 @@
+name: QASSAS Operational Readiness Gate
+
+on:
+  push:
+    branches:
+      - "qassas/operationalisation-**"
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-operational-readiness.yml"
+  pull_request:
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-operational-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  operational-readiness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qassas-enterprise
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: qassas-enterprise/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Operational preflight
+        run: |
+          cp .env.example .env.ops-ci
+          sed -i 's/^QASSAS_ENVIRONMENT=.*/QASSAS_ENVIRONMENT=ci/' .env.ops-ci
+          sed -i "s/^QASSAS_RELEASE_ID=.*/QASSAS_RELEASE_ID=${GITHUB_SHA}/" .env.ops-ci
+          node scripts/ops-preflight.mjs .env.ops-ci --allow-placeholder-secrets
+
+      - name: Capture full npm audit evidence
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Block unresolved Critical runtime dependency findings
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Verify OPA policy suite
+        run: |
+          docker run --rm \
+            -v "$PWD/opa:/policies" \
+            openpolicyagent/opa:1.20.2 \
+            test /policies -v
+
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qassas-operational-security-evidence
+          path: qassas-enterprise/npm-audit.json
+          if-no-files-found: error
