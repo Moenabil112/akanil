@@ -82,16 +82,16 @@ export class PortfolioReassessmentService {
       const snapshotId = "PSNAP-" + randomUUID();
       const tenantId = enterprise.rows[0].enterprise_id;
       await client.query(
-        "INSERT INTO qassas_core.portfolio_reassessment_snapshot (snapshot_id, enterprise_id, model_version, trigger_type, source_event_refs, asset_count, portfolio_state_hash, snapshot, created_by_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        "INSERT INTO qassas_core.portfolio_reassessment_snapshot (snapshot_id, enterprise_id, model_version, trigger_type, source_event_refs, asset_count, portfolio_state_hash, snapshot, created_by_user_id) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8::jsonb,$9)",
         [
           snapshotId,
           tenantId,
           board.model_version,
           triggerType,
-          sourceEventRefs,
+          JSON.stringify(sourceEventRefs),
           board.visible_asset_count,
           stateHash,
-          snapshotPayload,
+          JSON.stringify(snapshotPayload),
           actor.userId,
         ],
       );
