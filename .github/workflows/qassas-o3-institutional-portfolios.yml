@@ -43,7 +43,7 @@ jobs:
       QASSAS_DB_NAME: qassas
       QASSAS_DB_USER: qassas
       QASSAS_DB_PASSWORD: qassas-ci
-      QASSAS_REQUIRED_MIGRATION: 202609240021_institutional_activation_term_sheet.sql
+      QASSAS_REQUIRED_MIGRATION: 202609240022_institution_admin_activation_ticket.sql
 
     steps:
       - uses: actions/checkout@v4
