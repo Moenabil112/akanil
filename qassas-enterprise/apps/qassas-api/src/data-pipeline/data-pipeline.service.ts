@@ -232,7 +232,8 @@ export class DataPipelineService {
 
     const run = await this.findStartedRun(runId);
 
-    await this.database.transaction(async (client) => {
+    try {
+      await this.database.transaction(async (client) => {
       for (const record of records) {
         const sourceObjectId = record.source_object_id?.trim();
         const sourceObjectType = record.source_object_type?.trim();
@@ -302,7 +303,12 @@ export class DataPipelineService {
           WHERE r.ingestion_run_id = $1`,
         [runId],
       );
-    });
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "ingestion record rejected";
+      throw new BadRequestException(message);
+    }
 
     return this.runSummary(runId);
   }
