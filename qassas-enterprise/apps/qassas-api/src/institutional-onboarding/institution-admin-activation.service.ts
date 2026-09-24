@@ -239,7 +239,8 @@ export class InstitutionAdminActivationService {
     if (!secret) {
       throw new BadRequestException("activation_code is required");
     }
-    if (!identity.email || identity.emailVerified !== true) {
+    const verifiedEmail = identity.email?.trim().toLowerCase() ?? null;
+    if (!verifiedEmail || identity.emailVerified !== true) {
       throw new ForbiddenException(
         "A Keycloak identity with verified email is required",
       );
@@ -267,7 +268,7 @@ export class InstitutionAdminActivationService {
           "Institutional account identity is already bound",
         );
       }
-      if (identity.email.toLowerCase() !== ticket.expected_email) {
+      if (verifiedEmail !== ticket.expected_email) {
         throw new ForbiddenException(
           "Verified Keycloak email does not match activation ticket",
         );
@@ -350,7 +351,7 @@ export class InstitutionAdminActivationService {
         account_id: ticket.account_id,
         user_id: userId,
         external_subject: identity.externalSubject,
-        verified_email: identity.email,
+        verified_email: verifiedEmail,
         ticket_id: ticketId,
       };
       const bindingHash = createHash("sha256")
@@ -391,7 +392,7 @@ export class InstitutionAdminActivationService {
           institution_id: ticket.institution_id,
           ticket_id: ticketId,
           verified_email_hash: createHash("sha256")
-            .update(identity.email)
+            .update(verifiedEmail)
             .digest("hex"),
           email_verified: true,
         },
