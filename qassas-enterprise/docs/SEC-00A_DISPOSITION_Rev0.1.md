@@ -28,15 +28,15 @@ Therefore:
 
 ## Runtime image disposition
 
-Floating runtime tags have been removed from the operational baseline.
+Floating runtime tags have been removed from the Local/CI operational baseline.
 
-Pinned versions:
+Pinned Local/CI versions:
 - PostGIS: postgis/postgis:18-3.6
 - Keycloak: quay.io/keycloak/keycloak:26.4
 - OPA: openpolicyagent/opa:1.20.2
-- Temporal: temporalio/auto-setup:1.32.0
+- Temporal Local/CI harness: temporalio/auto-setup:1.29.7
 
-Digest pinning may be added in O2 deployment manifests where the deployment registry supplies immutable digests.
+The Temporal auto-setup image is deprecated and is therefore **not accepted** for TEST/UAT/Pilot/Production. Operational preflight rejects it in protected environments. A supported Temporal Server/Cloud deployment must be pinned in the O2 deployment profile before SEC-00A can be fully closed for Pilot promotion.
 
 ## IAM direct-grant disposition
 
@@ -58,4 +58,5 @@ SEC-00A may be closed when:
 3. locked dependency audit has no unresolved Critical finding;
 4. any High finding in the locked graph has a documented disposition;
 5. O1 runtime readiness CI passes;
-6. Sprint regression passes under the pinned runtime baseline.
+6. Sprint regression passes under the pinned Local/CI baseline;
+7. protected environment deployment uses a supported pinned Temporal Server/Cloud profile.
