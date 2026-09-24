@@ -74,3 +74,7 @@ jobs:
 
       - name: Verify tenant isolation and governed data pipeline
         run: node scripts/o3-data-pipeline-check.mjs
+
+      - name: Validate institutional Workbench
+        run: npm run o3:workbench-check
+
