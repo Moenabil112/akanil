@@ -68,6 +68,13 @@ jobs:
           docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml logs --no-color
           exit 1
 
+      - name: Verify worker and Temporal namespace
+        run: |
+          worker_id=$(docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml ps -q qassas-worker)
+          test -n "$worker_id"
+          test "$(docker inspect -f '{{.State.Running}}' "$worker_id")" = "true"
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml run --rm --no-deps temporal-namespace
+
       - name: Capture readiness evidence
         run: |
           mkdir -p artifacts/o2
@@ -103,6 +110,7 @@ jobs:
         run: |
           mkdir -p artifacts/o2
           docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml ps --all > artifacts/o2/compose-ps.txt || true
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml images > artifacts/o2/images.txt || true
           docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml logs --no-color > artifacts/o2/compose.log || true
           cp /tmp/qassas-o2-compose.yml artifacts/o2/rendered-compose.yml || true
 
