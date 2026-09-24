@@ -58,6 +58,11 @@ for (const key of ["POSTGIS_IMAGE", "KEYCLOAK_IMAGE", "OPA_IMAGE", "TEMPORAL_IMA
 }
 
 const protectedEnv = ["test", "uat", "pilot", "production"].includes(environment);
+
+if (protectedEnv && /^(dev|test-unset|unset)$/i.test(cfg.QASSAS_RELEASE_ID ?? "")) {
+  fail("QASSAS_RELEASE_ID must identify a concrete protected-environment release");
+}
+
 if (protectedEnv && !allowPlaceholderSecrets) {
   for (const key of ["QASSAS_DB_PASSWORD", "KEYCLOAK_ADMIN_PASSWORD"]) {
     if (!cfg[key] || /^(change-me|changeme|password|admin)$/i.test(cfg[key])) {
@@ -76,6 +81,17 @@ if (protectedEnv) {
 
   if ((cfg.TEMPORAL_IMAGE ?? "").includes("temporalio/auto-setup")) {
     fail("temporalio/auto-setup is a Local/CI harness and is forbidden in protected environments");
+  }
+
+  if (environment === "test") {
+    if (!(cfg.TEMPORAL_IMAGE ?? "").startsWith("temporalio/server:")) {
+      fail("TEST must use a pinned temporalio/server image");
+    }
+    for (const key of ["TEMPORAL_ADMIN_TOOLS_IMAGE", "TEMPORAL_DB_IMAGE"]) {
+      if (isFloatingImage(cfg[key])) {
+        fail(`${key} must use a version tag or immutable digest in TEST`);
+      }
+    }
   }
 }
 
@@ -115,5 +131,7 @@ console.log(JSON.stringify({
     keycloak: cfg.KEYCLOAK_IMAGE,
     opa: cfg.OPA_IMAGE,
     temporal: cfg.TEMPORAL_IMAGE,
+    temporal_admin_tools: cfg.TEMPORAL_ADMIN_TOOLS_IMAGE ?? null,
+    temporal_db: cfg.TEMPORAL_DB_IMAGE ?? null,
   }
 }, null, 2));
