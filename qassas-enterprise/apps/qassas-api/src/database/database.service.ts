@@ -15,6 +15,20 @@ function connectionConfig() {
   };
 }
 
+export interface MigrationHealth {
+  healthy: boolean;
+  requiredMigration: string | null;
+  requiredMigrationApplied: boolean;
+  appliedCount: number;
+  latestAppliedMigration: string | null;
+}
+
+interface MigrationHealthRow {
+  applied_count: string;
+  latest_applied_migration: string | null;
+  required_migration_applied: boolean;
+}
+
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
   private readonly pool = new Pool(connectionConfig());
@@ -25,6 +39,44 @@ export class DatabaseService implements OnModuleDestroy {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async migrationHealth(): Promise<MigrationHealth> {
+    const requiredMigration = process.env.QASSAS_REQUIRED_MIGRATION ?? null;
+
+    try {
+      const result = await this.pool.query<MigrationHealthRow>(
+        `SELECT
+           count(*)::text AS applied_count,
+           max(migration_name) AS latest_applied_migration,
+           CASE
+             WHEN $1::text IS NULL THEN false
+             ELSE bool_or(migration_name = $1)
+           END AS required_migration_applied
+         FROM qassas_core.schema_migration`,
+        [requiredMigration],
+      );
+
+      const row = result.rows[0];
+      const requiredMigrationApplied =
+        requiredMigration !== null && row?.required_migration_applied === true;
+
+      return {
+        healthy: requiredMigrationApplied,
+        requiredMigration,
+        requiredMigrationApplied,
+        appliedCount: Number(row?.applied_count ?? 0),
+        latestAppliedMigration: row?.latest_applied_migration ?? null,
+      };
+    } catch {
+      return {
+        healthy: false,
+        requiredMigration,
+        requiredMigrationApplied: false,
+        appliedCount: 0,
+        latestAppliedMigration: null,
+      };
     }
   }
 
