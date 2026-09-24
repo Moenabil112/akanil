@@ -43,7 +43,7 @@ jobs:
       QASSAS_DB_NAME: qassas
       QASSAS_DB_USER: qassas
       QASSAS_DB_PASSWORD: qassas-ci
-      QASSAS_REQUIRED_MIGRATION: 202609240019_institutional_tenancy.sql
+      QASSAS_REQUIRED_MIGRATION: 202609240020_ingestion_ledger_asset_registry.sql
 
     steps:
       - uses: actions/checkout@v4
@@ -71,3 +71,6 @@ jobs:
 
       - name: Verify institutional model and source contracts
         run: node scripts/o3-institutional-model-check.mjs
+
+      - name: Verify tenant isolation and governed data pipeline
+        run: node scripts/o3-data-pipeline-check.mjs
