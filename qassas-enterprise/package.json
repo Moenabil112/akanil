@@ -23,7 +23,9 @@
     "db:seed:sprint2": "node scripts/seed-sprint2-multi-asset.mjs",
     "e2e:sprint2-multi-asset": "node scripts/e2e-sprint2-multi-asset.mjs",
     "db:seed:sprint3": "node scripts/seed-sprint3-portfolio-intelligence.mjs",
-    "e2e:sprint3-portfolio": "node scripts/e2e-sprint3-portfolio-intelligence.mjs"
+    "e2e:sprint3-portfolio": "node scripts/e2e-sprint3-portfolio-intelligence.mjs",
+    "o2:slo": "node scripts/o2-test-slo-check.mjs",
+    "o2:promotion-bundle": "node scripts/o2-promotion-bundle.mjs"
   },
   "engines": {
     "node": ">=22"
