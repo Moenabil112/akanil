@@ -12,44 +12,67 @@ async function json(url) {
   return { response, body };
 }
 
+const samples = [];
+let correlationFailures = 0;
+
 for (let i = 0; i < sampleCount; i += 1) {
-  const response = await fetch(`${baseUrl}/health/live`, {
-    headers: { "x-correlation-id": `O2-SLO-${String(i).padStart(4, "0")}` },
+  const correlationId = `O2-SLO-${String(i).padStart(4, "0")}`;
+  const started = performance.now();
+  const response = await fetch(`${baseUrl}/health/ready`, {
+    headers: { "x-correlation-id": correlationId },
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) {
-    throw new Error(`SLO warmup request failed: ${response.status}`);
+  const durationMs = performance.now() - started;
+
+  if (response.headers.get("x-correlation-id") !== correlationId) {
+    correlationFailures += 1;
   }
+
+  samples.push({
+    status: response.status,
+    duration_ms: durationMs,
+  });
 }
 
 const ready = await json(`${baseUrl}/health/ready`);
 const metrics = await json(`${baseUrl}/observability/metrics`);
 
+const durations = samples.map((sample) => sample.duration_ms).sort((a, b) => a - b);
+const p95Index = Math.min(
+  durations.length - 1,
+  Math.max(0, Math.ceil(durations.length * 0.95) - 1),
+);
+const p95 = durations.length === 0 ? 0 : durations[p95Index];
+const fiveXx = samples.filter((sample) => sample.status >= 500).length;
+const fiveXxRatio = samples.length === 0 ? 0 : fiveXx / samples.length;
+
 const failures = [];
-if (!ready.response.ok || ready.body.ready !== true) {
-  failures.push("readiness");
-}
-if (metrics.body.latency_sample_count < sampleCount) {
-  failures.push("insufficient_latency_samples");
-}
-if (metrics.body.latency_ms_p95 > p95Limit) {
-  failures.push(`p95_latency_ms>${p95Limit}`);
-}
-if (metrics.body.server_error_ratio > max5xxRatio) {
-  failures.push(`server_error_ratio>${max5xxRatio}`);
-}
+if (!ready.response.ok || ready.body.ready !== true) failures.push("readiness");
+if (samples.length < sampleCount) failures.push("insufficient_samples");
+if (p95 > p95Limit) failures.push(`steady_state_p95_latency_ms>${p95Limit}`);
+if (fiveXxRatio > max5xxRatio) failures.push(`steady_state_5xx_ratio>${max5xxRatio}`);
+if (correlationFailures > 0) failures.push("correlation_id_roundtrip");
+if (metrics.body.latency_sample_count < sampleCount) failures.push("metrics_not_recording_requests");
 
 const evidence = {
   captured_at: new Date().toISOString(),
   release_id: ready.body.release_id,
   environment: ready.body.environment,
+  measurement_window: "STEADY_STATE_AFTER_READINESS",
   thresholds: {
-    minimum_samples: sampleCount,
+    samples: sampleCount,
     p95_latency_ms_max: p95Limit,
     server_error_ratio_max: max5xxRatio,
   },
+  measured: {
+    sample_count: samples.length,
+    p95_latency_ms: Number(p95.toFixed(2)),
+    server_5xx_count: fiveXx,
+    server_5xx_ratio: fiveXxRatio,
+    correlation_id_failures: correlationFailures,
+  },
   readiness: ready.body,
-  metrics: metrics.body,
+  process_metrics_snapshot: metrics.body,
   result: failures.length === 0 ? "PASS" : "FAIL",
   failures,
 };
