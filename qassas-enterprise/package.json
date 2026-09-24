@@ -25,7 +25,8 @@
     "db:seed:sprint3": "node scripts/seed-sprint3-portfolio-intelligence.mjs",
     "e2e:sprint3-portfolio": "node scripts/e2e-sprint3-portfolio-intelligence.mjs",
     "o2:slo": "node scripts/o2-test-slo-check.mjs",
-    "o2:promotion-bundle": "node scripts/o2-promotion-bundle.mjs"
+    "o2:promotion-bundle": "node scripts/o2-promotion-bundle.mjs",
+    "db:seed:institutions": "node scripts/seed-institutional-portfolios.mjs"
   },
   "engines": {
     "node": ">=22"
