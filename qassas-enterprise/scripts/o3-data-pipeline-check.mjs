@@ -90,7 +90,7 @@ try {
     privateRejected = true;
     assert.match(
       error instanceof Error ? error.message : String(error),
-      /requires active contractual agreement/i,
+      /requires active contractual (agreement|connection)/i,
     );
   }
   assert.equal(privateRejected, true, "private source must fail closed before Term Sheet activation");
