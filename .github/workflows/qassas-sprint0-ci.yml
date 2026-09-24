@@ -189,6 +189,13 @@ jobs:
           set +a
           npm run e2e:o3-institutional-isolation
 
+      - name: Execute E2E-O3-M1-INSTITUTION-ADMIN-ACTIVATION-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:o3-m1-admin-activation
+
       - name: Show diagnostics
         if: failure()
         run: |
