@@ -43,7 +43,7 @@ jobs:
       QASSAS_DB_NAME: qassas
       QASSAS_DB_USER: qassas
       QASSAS_DB_PASSWORD: qassas-ci
-      QASSAS_REQUIRED_MIGRATION: 202609240020_ingestion_ledger_asset_registry.sql
+      QASSAS_REQUIRED_MIGRATION: 202609240021_institutional_activation_term_sheet.sql
 
     steps:
       - uses: actions/checkout@v4
