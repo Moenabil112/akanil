@@ -47,6 +47,9 @@ jobs:
           sed -i "s/^QASSAS_RELEASE_ID=.*/QASSAS_RELEASE_ID=${GITHUB_SHA}/" .env.ops-ci
           node scripts/ops-preflight.mjs .env.ops-ci --allow-placeholder-secrets
 
+      - name: Validate Pilot and Production IAM profiles
+        run: node scripts/validate-protected-iam.mjs
+
       - name: Capture locked npm audit evidence
         run: npm audit --json > npm-audit.json || true
 
