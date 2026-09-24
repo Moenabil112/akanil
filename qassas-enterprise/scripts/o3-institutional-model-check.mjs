@@ -70,6 +70,24 @@ try {
   assert.equal(knownCounts.get("PORT-ATLAS-GOLDEN-KSA"), null);
   assert.equal(knownCounts.get("PORT-SGR-KSA"), null);
 
+  const artarAssets = await client.query(
+    "SELECT asset_id, master_data_status FROM qassas_core.portfolio_asset_registry WHERE portfolio_id = 'PORT-ARTAR-KSA' ORDER BY asset_id",
+  );
+  assert.equal(
+    artarAssets.rowCount,
+    8,
+    "ARTAR must expose eight Taadeen public assets",
+  );
+
+  const artarAutoTargets = await client.query(
+    "SELECT count(*)::int AS target_count FROM qassas_core.target WHERE enterprise_id = 'ENT-ARTAR-KSA'",
+  );
+  assert.equal(
+    artarAutoTargets.rows[0].target_count,
+    0,
+    "public portfolio onboarding must not auto-create Targets",
+  );
+
   console.log(
     JSON.stringify(
       {
@@ -80,6 +98,8 @@ try {
         public_sources_per_portfolio: 2,
         private_sources_per_portfolio: 1,
         fabricated_idp_subjects: 0,
+        artar_public_assets: 8,
+        artar_auto_targets: 0,
       },
       null,
       2,
