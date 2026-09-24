@@ -91,6 +91,17 @@ export class InstitutionOnboardingService {
     const documentHash = input.document_hash?.trim().toLowerCase();
     const agreementType = input.agreement_type ?? "TERM_SHEET";
     const agreementStatus = input.agreement_status ?? "SIGNED";
+    const allowedDomains = [...new Set(
+      (input.allowed_domains ?? [])
+        .map((domain) => domain.trim().toUpperCase())
+        .filter(Boolean),
+    )].sort();
+
+    if (agreementStatus === "ACTIVE" && allowedDomains.length === 0) {
+      throw new BadRequestException(
+        "Active agreement requires at least one allowed data domain",
+      );
+    }
 
     if (!institutionId || !documentRef || !documentHash) {
       throw new BadRequestException(
@@ -164,7 +175,7 @@ export class InstitutionOnboardingService {
           agreementStatus,
           documentRef,
           documentHash,
-          JSON.stringify(input.allowed_domains ?? []),
+          JSON.stringify(allowedDomains),
           effectiveFrom?.toISOString() ?? null,
           effectiveTo?.toISOString() ?? null,
           actor.userId,
@@ -187,7 +198,7 @@ export class InstitutionOnboardingService {
           agreement_type: agreementType,
           document_ref: documentRef,
           document_hash: documentHash,
-          allowed_domains: input.allowed_domains ?? [],
+          allowed_domains: allowedDomains,
         },
       });
 
@@ -198,6 +209,51 @@ export class InstitutionOnboardingService {
         effective_to: row.effective_to?.toISOString() ?? null,
       };
     });
+  }
+
+  async listAgreements(
+    institutionId: string,
+    actor: AuthenticatedActor,
+  ) {
+    await this.requireInstitutionVisibility(institutionId, actor);
+
+    const result = await this.database.query<{
+      agreement_id: string;
+      agreement_type: string;
+      agreement_status: string;
+      document_ref: string;
+      document_hash: string;
+      allowed_domains: string[];
+      effective_from: Date | null;
+      effective_to: Date | null;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      `SELECT agreement_id, agreement_type, agreement_status,
+              document_ref, document_hash, allowed_domains,
+              effective_from, effective_to, created_at, updated_at
+         FROM qassas_core.institution_access_agreement
+        WHERE institution_id = $1
+        ORDER BY created_at DESC, agreement_id DESC`,
+      [institutionId],
+    );
+
+    return {
+      institution_id: institutionId,
+      agreement_count: result.rowCount,
+      agreements: result.rows.map((row) => ({
+        agreement_id: row.agreement_id,
+        agreement_type: row.agreement_type,
+        agreement_status: row.agreement_status,
+        document_ref: row.document_ref,
+        document_hash: row.document_hash,
+        allowed_domains: row.allowed_domains ?? [],
+        effective_from: row.effective_from?.toISOString() ?? null,
+        effective_to: row.effective_to?.toISOString() ?? null,
+        created_at: row.created_at.toISOString(),
+        updated_at: row.updated_at.toISOString(),
+      })),
+    };
   }
 
   async activatePrivateSource(
@@ -274,12 +330,51 @@ export class InstitutionOnboardingService {
       );
 
       await client.query(
-        `UPDATE qassas_core.source_adapter_contract
-            SET adapter_status = 'CONNECTED',
-                updated_at = now()
-          WHERE source_id = $1
-            AND adapter_kind = 'PARTNER_DATA_ROOM'`,
-        [sourceId],
+        `UPDATE qassas_core.portfolio_private_source_connection
+            SET connection_status = 'REVOKED',
+                revoked_at = now()
+          WHERE portfolio_id = $1
+            AND source_id = $2
+            AND connection_status = 'CONNECTED'`,
+        [portfolioId, sourceId],
+      );
+
+      const connectionId = `PSC-${randomUUID()}`;
+      await client.query(
+        `INSERT INTO qassas_core.portfolio_private_source_connection (
+           connection_id, portfolio_id, source_id, agreement_id,
+           connection_status, allowed_domains, activated_by_user_id,
+           correlation_id
+         )
+         VALUES ($1,$2,$3,$4,'CONNECTED',$5::jsonb,$6,$7)`,
+        [
+          connectionId,
+          portfolioId,
+          sourceId,
+          agreementId,
+          JSON.stringify(row.allowed_domains ?? []),
+          actor.userId,
+          correlationId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO qassas_core.portfolio_private_source_connection_event (
+           connection_event_id, connection_id, portfolio_id, source_id,
+           agreement_id, event_type, actor_user_id, correlation_id,
+           allowed_domains_snapshot
+         )
+         VALUES ($1,$2,$3,$4,$5,'CONNECTED',$6,$7,$8::jsonb)`,
+        [
+          `PSCE-${randomUUID()}`,
+          connectionId,
+          portfolioId,
+          sourceId,
+          agreementId,
+          actor.userId,
+          correlationId,
+          JSON.stringify(row.allowed_domains ?? []),
+        ],
       );
 
       await this.audit.write(client, {
@@ -306,6 +401,8 @@ export class InstitutionOnboardingService {
         source_id: sourceId,
         agreement_id: agreementId,
         access_status: "CONNECTED",
+        connection_id: connectionId,
+        allowed_domains: row.allowed_domains ?? [],
         private_ingestion_enabled: true,
       };
     });
