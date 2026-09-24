@@ -12,6 +12,17 @@ export class OpaPolicyService {
     return (process.env.OPA_URL ?? "http://127.0.0.1:8181").replace(/\/$/, "");
   }
 
+  async health(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl()}/health?plugins`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   private subject(actor: AuthenticatedActor) {
     return {
       user_id: actor.userId,
