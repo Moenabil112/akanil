@@ -26,7 +26,9 @@
     "e2e:sprint3-portfolio": "node scripts/e2e-sprint3-portfolio-intelligence.mjs",
     "o2:slo": "node scripts/o2-test-slo-check.mjs",
     "o2:promotion-bundle": "node scripts/o2-promotion-bundle.mjs",
-    "db:seed:institutions": "node scripts/seed-institutional-portfolios.mjs"
+    "db:seed:institutions": "node scripts/seed-institutional-portfolios.mjs",
+    "workbench:serve": "node workbench/server.mjs",
+    "o3:workbench-check": "node scripts/o3-workbench-check.mjs"
   },
   "engines": {
     "node": ">=22"
