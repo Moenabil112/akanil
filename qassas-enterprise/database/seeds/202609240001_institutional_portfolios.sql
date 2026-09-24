@@ -332,4 +332,50 @@ SET asset_id = EXCLUDED.asset_id,
     identity_confidence = EXCLUDED.identity_confidence,
     last_seen_at = EXCLUDED.last_seen_at;
 
+
+INSERT INTO qassas_security.user_identity (user_id, external_subject, status)
+VALUES
+  ('USR-E2E-ATLAS', '88888888-8888-4888-8888-888888888888', 'ACTIVE'),
+  ('USR-E2E-ARTAR', '99999999-9999-4999-8999-999999999999', 'ACTIVE')
+ON CONFLICT (user_id) DO UPDATE
+SET external_subject = EXCLUDED.external_subject,
+    status = EXCLUDED.status;
+
+INSERT INTO qassas_security.role_assignment (
+  role_assignment_id, user_id, role_type, asset_scope, jv_scope,
+  decision_class_scope, capital_threshold, security_clearance,
+  effective_from, effective_to, status
+)
+VALUES
+  (
+    'RA-E2E-ATLAS-INSTITUTION', 'USR-E2E-ATLAS', 'INSTITUTION_VIEWER',
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
+    NULL, 'C1_INTERNAL', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+  ),
+  (
+    'RA-E2E-ARTAR-INSTITUTION', 'USR-E2E-ARTAR', 'INSTITUTION_VIEWER',
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
+    NULL, 'C1_INTERNAL', '2026-01-01T00:00:00Z', NULL, 'ACTIVE'
+  )
+ON CONFLICT (role_assignment_id) DO UPDATE
+SET status = 'ACTIVE',
+    effective_to = NULL;
+
+INSERT INTO qassas_security.institution_membership (
+  membership_id, institution_id, user_id, institution_role,
+  status, effective_from, effective_to
+)
+VALUES
+  (
+    'MEM-E2E-ATLAS', 'INST-ATLAS-GOLDEN-KSA', 'USR-E2E-ATLAS',
+    'INSTITUTION_VIEWER', 'ACTIVE', '2026-01-01T00:00:00Z', NULL
+  ),
+  (
+    'MEM-E2E-ARTAR', 'INST-ARTAR-KSA', 'USR-E2E-ARTAR',
+    'INSTITUTION_VIEWER', 'ACTIVE', '2026-01-01T00:00:00Z', NULL
+  )
+ON CONFLICT (institution_id, user_id, institution_role) DO UPDATE
+SET status = 'ACTIVE',
+    effective_to = NULL;
+
 COMMIT;
