@@ -78,3 +78,6 @@ jobs:
       - name: Validate institutional Workbench
         run: npm run o3:workbench-check
 
+      - name: Verify Term Sheet and partner-data contract scope
+        run: npm run o3:m2-contract-scope-check
+
