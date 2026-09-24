@@ -278,4 +278,58 @@ SET endpoint_value = EXCLUDED.endpoint_value,
     configuration = EXCLUDED.configuration,
     updated_at = now();
 
+
+INSERT INTO qassas_core.portfolio_asset_registry (
+  asset_id, portfolio_id, enterprise_id, asset_name, asset_type,
+  external_licence_number, region, area_km2, mineral_classes,
+  source_of_record_id, source_object_id, master_data_status,
+  security_class, public_data_last_seen_at
+)
+VALUES
+  ('AST-ARTAR-14433112', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 14433112', 'EXPLORATION_LICENCE', '14433112', 'Riyadh', 98.84, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '14433112', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-14433113', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 14433113', 'EXPLORATION_LICENCE', '14433113', 'Riyadh', 85.34, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '14433113', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-14433131', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 14433131', 'EXPLORATION_LICENCE', '14433131', 'Makkah', 99.85, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '14433131', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-1444345', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 1444345', 'EXPLORATION_LICENCE', '1444345', 'Aseer', 44.82, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '1444345', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-1444360', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 1444360', 'EXPLORATION_LICENCE', '1444360', 'Aseer', 68.01, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '1444360', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-1444367', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 1444367', 'EXPLORATION_LICENCE', '1444367', 'Makkah', 52.82, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '1444367', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-1444368', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 1444368', 'EXPLORATION_LICENCE', '1444368', 'Al Bahah', 27.31, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '1444368', 'PUBLIC_VERIFIED', 'C0_PUBLIC', '2026-09-02T13:33:00Z'),
+  ('AST-ARTAR-20250300583', 'PORT-ARTAR-KSA', 'ENT-ARTAR-KSA', 'ARTAR Exploration Licence 20250300583', 'EXPLORATION_LICENCE', '20250300583', NULL, 26.34, '["CLASS_A"]'::jsonb, 'SRC-TAADEN', '20250300583', 'DISCOVERED', 'C0_PUBLIC', '2026-09-02T13:33:00Z')
+ON CONFLICT (asset_id) DO UPDATE
+SET asset_name = EXCLUDED.asset_name,
+    asset_type = EXCLUDED.asset_type,
+    external_licence_number = EXCLUDED.external_licence_number,
+    region = EXCLUDED.region,
+    area_km2 = EXCLUDED.area_km2,
+    mineral_classes = EXCLUDED.mineral_classes,
+    source_of_record_id = EXCLUDED.source_of_record_id,
+    source_object_id = EXCLUDED.source_object_id,
+    master_data_status = CASE
+      WHEN qassas_core.portfolio_asset_registry.master_data_status = 'PARTNER_CONFIRMED'
+        THEN 'PARTNER_CONFIRMED'
+      ELSE EXCLUDED.master_data_status
+    END,
+    public_data_last_seen_at = EXCLUDED.public_data_last_seen_at,
+    updated_at = now();
+
+INSERT INTO qassas_core.asset_source_identity (
+  source_id, source_object_id, asset_id, match_method,
+  identity_confidence, last_seen_at
+)
+SELECT
+  'SRC-TAADEN',
+  a.source_object_id,
+  a.asset_id,
+  'EXACT_PUBLIC_ID',
+  1,
+  a.public_data_last_seen_at
+FROM qassas_core.portfolio_asset_registry a
+WHERE a.portfolio_id = 'PORT-ARTAR-KSA'
+  AND a.source_of_record_id = 'SRC-TAADEN'
+  AND a.source_object_id IS NOT NULL
+ON CONFLICT (source_id, source_object_id) DO UPDATE
+SET asset_id = EXCLUDED.asset_id,
+    match_method = EXCLUDED.match_method,
+    identity_confidence = EXCLUDED.identity_confidence,
+    last_seen_at = EXCLUDED.last_seen_at;
+
 COMMIT;
