@@ -7,7 +7,7 @@ import { DecisionModule } from "./decision/decision.module";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { HealthController } from "./health/health.controller";
 import { OutboxModule } from "./outbox/outbox.module";
-import { MultiAssetModule } from "./multi-asset/multi-asset.module";
+import { MultiAssetModule } from "./multi-asset/multi-asset.module";\nimport { ObservabilityModule } from "./observability/observability.module";
 import { PortfolioControlModule } from "./portfolio-control/portfolio-control.module";
 import { PortfolioIntelligenceModule } from "./portfolio-intelligence/portfolio-intelligence.module";
 import { RecommendationModule } from "./recommendation/recommendation.module";
