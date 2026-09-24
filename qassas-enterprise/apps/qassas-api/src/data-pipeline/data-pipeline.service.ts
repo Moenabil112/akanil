@@ -18,7 +18,12 @@ interface PipelineStatusRow {
   source_class: string;
   access_basis: string;
   access_status: string;
+  agreement_id: string | null;
+  allowed_domains: string[];
   connector_status: string;
+  connection_id: string | null;
+  connection_status: string | null;
+  connection_activated_at: Date | null;
   adapter_count: number;
   adapter_states: unknown;
   latest_ingestion_run_id: string | null;
@@ -28,6 +33,8 @@ interface PipelineStatusRow {
   latest_record_count: number | null;
   latest_accepted_count: number | null;
   latest_rejected_count: number | null;
+  latest_agreement_id_snapshot: string | null;
+  latest_allowed_domains_snapshot: string[];
 }
 
 interface RunRow {
@@ -64,6 +71,7 @@ type IngestionRecordInput = {
   normalized_object_type?: string | null;
   normalized_object_id?: string | null;
   validation_status?: "RECEIVED" | "NORMALIZED" | "ACCEPTED" | "QUARANTINED" | "REJECTED";
+  data_domain?: string | null;
   security_class?: string;
   provenance?: Record<string, unknown>;
 };
@@ -118,7 +126,16 @@ export class DataPipelineService {
         source_class: row.source_class,
         access_basis: row.access_basis,
         access_status: row.access_status,
+        agreement_id: row.agreement_id,
+        allowed_domains: row.allowed_domains ?? [],
         connector_status: row.connector_status,
+        connection: row.connection_id
+          ? {
+              connection_id: row.connection_id,
+              status: row.connection_status,
+              activated_at: row.connection_activated_at?.toISOString() ?? null,
+            }
+          : null,
         adapter_count: Number(row.adapter_count ?? 0),
         adapters: row.adapter_states ?? [],
         latest_run: row.latest_ingestion_run_id
@@ -130,6 +147,9 @@ export class DataPipelineService {
               record_count: Number(row.latest_record_count ?? 0),
               accepted_count: Number(row.latest_accepted_count ?? 0),
               rejected_count: Number(row.latest_rejected_count ?? 0),
+              agreement_id_snapshot: row.latest_agreement_id_snapshot,
+              allowed_domains_snapshot:
+                row.latest_allowed_domains_snapshot ?? [],
             }
           : null,
       })),
@@ -165,6 +185,9 @@ export class DataPipelineService {
         source_id: string;
         trigger_type: string;
         status: string;
+        source_class_snapshot: string | null;
+        agreement_id_snapshot: string | null;
+        allowed_domains_snapshot: string[];
         started_at: Date;
       }>(
         `INSERT INTO qassas_core.source_ingestion_run (
@@ -172,7 +195,9 @@ export class DataPipelineService {
            source_snapshot_ref, requested_by_user_id, correlation_id, status
          )
          VALUES ($1,$2,$3,$4,$5,$6,$7,'STARTED')
-         RETURNING ingestion_run_id, portfolio_id, source_id, trigger_type, status, started_at`,
+         RETURNING ingestion_run_id, portfolio_id, source_id, trigger_type, status,
+                   source_class_snapshot, agreement_id_snapshot,
+                   allowed_domains_snapshot, started_at`,
         [
           runId,
           portfolioId,
@@ -212,6 +237,7 @@ export class DataPipelineService {
         const sourceObjectId = record.source_object_id?.trim();
         const sourceObjectType = record.source_object_type?.trim();
         const payloadHash = record.payload_hash?.trim().toLowerCase();
+        const dataDomain = record.data_domain?.trim().toUpperCase() || null;
         const retrievedAt = record.retrieved_at
           ? new Date(record.retrieved_at)
           : new Date();
@@ -235,9 +261,10 @@ export class DataPipelineService {
              ingestion_record_id, ingestion_run_id, source_object_id,
              source_object_type, source_version, source_updated_at,
              retrieved_at, payload_hash, normalized_object_type,
-             normalized_object_id, validation_status, security_class, provenance
+             normalized_object_id, validation_status, data_domain,
+             security_class, provenance
            )
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb)
            ON CONFLICT (ingestion_run_id, source_object_id, payload_hash)
            DO NOTHING`,
           [
@@ -252,6 +279,7 @@ export class DataPipelineService {
             record.normalized_object_type ?? null,
             record.normalized_object_id ?? null,
             record.validation_status ?? "RECEIVED",
+            dataDomain,
             record.security_class ?? "C0_PUBLIC",
             JSON.stringify(record.provenance ?? {}),
           ],
@@ -532,12 +560,17 @@ export class DataPipelineService {
       accepted_count: number;
       rejected_count: number;
       content_manifest_hash: string | null;
+      source_class_snapshot: string | null;
+      agreement_id_snapshot: string | null;
+      allowed_domains_snapshot: string[];
       started_at: Date;
       completed_at: Date | null;
     }>(
       `SELECT ingestion_run_id, portfolio_id, source_id, trigger_type, status,
               record_count, accepted_count, rejected_count,
-              content_manifest_hash, started_at, completed_at
+              content_manifest_hash, source_class_snapshot,
+              agreement_id_snapshot, allowed_domains_snapshot,
+              started_at, completed_at
          FROM qassas_core.source_ingestion_run
         WHERE ingestion_run_id = $1
         LIMIT 1`,
