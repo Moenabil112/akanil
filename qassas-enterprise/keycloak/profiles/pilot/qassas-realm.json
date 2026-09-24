@@ -1,0 +1,16 @@
+{
+  "realm": "qassas-pilot",
+  "enabled": true,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "clients": [
+    {
+      "clientId": "qassas-api",
+      "name": "QASSAS API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true
+    }
+  ],
+  "users": []
+}
