@@ -182,6 +182,51 @@ export class InstitutionOnboardingService {
         ],
       );
 
+      if (["EXPIRED", "TERMINATED"].includes(agreementStatus)) {
+        const connected = await client.query<{
+          connection_id: string;
+          portfolio_id: string;
+          source_id: string;
+        }>(
+          `UPDATE qassas_core.portfolio_private_source_connection
+              SET connection_status = 'SUSPENDED',
+                  suspended_at = now()
+            WHERE agreement_id = $1
+              AND connection_status = 'CONNECTED'
+          RETURNING connection_id, portfolio_id, source_id`,
+          [agreementId],
+        );
+
+        await client.query(
+          `UPDATE qassas_core.portfolio_data_source
+              SET access_status = 'AGREEMENT_REQUIRED'
+            WHERE agreement_id = $1
+              AND access_status = 'CONNECTED'`,
+          [agreementId],
+        );
+
+        for (const connection of connected.rows) {
+          await client.query(
+            `INSERT INTO qassas_core.portfolio_private_source_connection_event (
+               connection_event_id, connection_id, portfolio_id, source_id,
+               agreement_id, event_type, actor_user_id, correlation_id,
+               allowed_domains_snapshot
+             )
+             VALUES ($1,$2,$3,$4,$5,'SUSPENDED',$6,$7,$8::jsonb)`,
+            [
+              `PSCE-${randomUUID()}`,
+              connection.connection_id,
+              connection.portfolio_id,
+              connection.source_id,
+              agreementId,
+              actor.userId,
+              correlationId,
+              JSON.stringify(allowedDomains),
+            ],
+          );
+        }
+      }
+
       await this.audit.write(client, {
         eventType: "INSTITUTION_ACCESS_AGREEMENT_RECORDED",
         objectType: "InstitutionAccessAgreement",
