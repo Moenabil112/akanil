@@ -73,6 +73,10 @@ if (protectedEnv) {
       fail(`${key} must target a deployed service in ${environment}`);
     }
   }
+
+  if ((cfg.TEMPORAL_IMAGE ?? "").includes("temporalio/auto-setup")) {
+    fail("temporalio/auto-setup is a Local/CI harness and is forbidden in protected environments");
+  }
 }
 
 if (["pilot", "production"].includes(environment)) {
