@@ -27,6 +27,26 @@ export class KeycloakJwtService {
     return this.jwks;
   }
 
+  async health(): Promise<boolean> {
+    try {
+      const issuer = this.issuer();
+      const response = await fetch(
+        `${issuer}/.well-known/openid-configuration`,
+        { signal: AbortSignal.timeout(3000) },
+      );
+      if (!response.ok) return false;
+
+      const document = (await response.json()) as {
+        issuer?: string;
+        jwks_uri?: string;
+      };
+
+      return document.issuer === issuer && typeof document.jwks_uri === "string";
+    } catch {
+      return false;
+    }
+  }
+
   async verifyAuthorizationHeader(
     authorization?: string,
   ): Promise<JWTPayload> {
