@@ -39,13 +39,15 @@ Allowed environments:
 `local | ci | test | uat | pilot | production`.
 
 ### ORG-03 — Runtime image control
-Floating runtime tags are forbidden for TEST/UAT/Pilot/Production.
+Floating runtime tags are forbidden.
 
-Initial O0 pins:
+Local/CI baseline pins:
 - PostGIS: `postgis/postgis:18-3.6`
 - Keycloak: `quay.io/keycloak/keycloak:26.4`
 - OPA: `openpolicyagent/opa:1.20.2`
-- Temporal: `temporalio/auto-setup:1.32.0`
+- Temporal local harness: `temporalio/auto-setup:1.29.7`
+
+The Temporal auto-setup image is treated as a Local/CI harness only. TEST/UAT/Pilot/Production deployment profiles must use a supported Temporal Server/Cloud deployment, pinned independently in O2.
 
 ### ORG-04 — Security condition inheritance
 SEC-00A #11 remains a deployment blocker until:
