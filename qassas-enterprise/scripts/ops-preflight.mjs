@@ -47,6 +47,10 @@ if (!cfg.QASSAS_RELEASE_ID) {
   fail("QASSAS_RELEASE_ID is required");
 }
 
+if (!cfg.QASSAS_REQUIRED_MIGRATION) {
+  fail("QASSAS_REQUIRED_MIGRATION is required");
+}
+
 for (const key of ["POSTGIS_IMAGE", "KEYCLOAK_IMAGE", "OPA_IMAGE", "TEMPORAL_IMAGE"]) {
   if (isFloatingImage(cfg[key])) {
     fail(`${key} must use a version tag or immutable digest; floating tags are forbidden`);
@@ -71,12 +75,23 @@ if (protectedEnv) {
   }
 }
 
-const realmPath = path.resolve(process.cwd(), "keycloak/realm/qassas-pilot-realm.json");
-if (fs.existsSync(realmPath) && ["pilot", "production"].includes(environment)) {
-  const realm = JSON.parse(fs.readFileSync(realmPath, "utf8"));
-  const clients = Array.isArray(realm.clients) ? realm.clients : [];
-  if (clients.some((client) => client?.clientId === "qassas-cli")) {
-    fail("qassas-cli direct-grant client is forbidden in Pilot/Production realm configuration");
+if (["pilot", "production"].includes(environment)) {
+  const profilePath = path.resolve(
+    process.cwd(),
+    `keycloak/profiles/${environment}/qassas-realm.json`,
+  );
+
+  if (!fs.existsSync(profilePath)) {
+    fail(`Keycloak ${environment} realm profile is missing`);
+  } else {
+    const realm = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    const clients = Array.isArray(realm.clients) ? realm.clients : [];
+    if (clients.some((client) => client?.clientId === "qassas-cli")) {
+      fail("qassas-cli direct-grant client is forbidden in Pilot/Production realm configuration");
+    }
+    if (clients.some((client) => client?.directAccessGrantsEnabled === true)) {
+      fail("direct access grants are forbidden in Pilot/Production realm configuration");
+    }
   }
 }
 
@@ -90,6 +105,7 @@ console.log("QASSAS Operational Preflight — PASS");
 console.log(JSON.stringify({
   environment,
   release_id: cfg.QASSAS_RELEASE_ID,
+  required_migration: cfg.QASSAS_REQUIRED_MIGRATION,
   runtime_images: {
     postgis: cfg.POSTGIS_IMAGE,
     keycloak: cfg.KEYCLOAK_IMAGE,
