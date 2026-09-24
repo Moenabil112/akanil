@@ -18,6 +18,7 @@ const state = {
   selectedPortfolio: null,
   pipeline: null,
   assets: [],
+  onboarding: null,
   assetFilter: "",
 };
 
@@ -34,7 +35,7 @@ function clearError() {
 function showAuth() {
   el("auth-screen").hidden = false;
   el("workspace").hidden = true;
-  el("logout-button").hidden = true;
+  el("logout-button").hidden = !getAccessToken();
 }
 
 function showWorkspace() {
@@ -109,15 +110,17 @@ async function loadPortfolio(portfolioId) {
   state.selectedPortfolioId = portfolioId;
   sessionStorage.setItem("qassas.workbench.portfolio_id", portfolioId);
 
-  const [portfolio, pipeline, assets] = await Promise.all([
-    api.portfolio(portfolioId),
+  const portfolio = await api.portfolio(portfolioId);
+  const [pipeline, assets, onboarding] = await Promise.all([
     api.pipelineStatus(portfolioId),
     api.assets(portfolioId),
+    api.onboardingStatus(portfolio.institution.institution_id),
   ]);
 
   state.selectedPortfolio = portfolio;
   state.pipeline = pipeline;
   state.assets = assets.assets || [];
+  state.onboarding = onboarding;
 
   renderPortfolio();
 }
@@ -147,6 +150,7 @@ function renderPortfolio() {
   setText("metric-term-sheet", p.data_readiness.term_sheet_required_count);
 
   renderAdaptiveSurface(p);
+  renderInstitutionAccess(p, state.onboarding);
   renderAssets();
   renderSources(pipeline);
   renderPartnerLayer(p, pipeline);
@@ -228,6 +232,129 @@ function renderAdaptiveSurface(portfolio) {
       </div>
     </div>
   `;
+}
+
+function renderInstitutionAccess(portfolio, onboarding) {
+  const account = onboarding?.account || {};
+  const loginEnabled = account.login_enabled === true;
+
+  setText("account-status", humanize(account.status || "UNKNOWN"));
+  setText(
+    "account-binding-status",
+    `Identity binding: ${humanize(account.iam_binding_status || "UNKNOWN")}`,
+  );
+  setText(
+    "primary-admin-status",
+    account.primary_admin_user_id ? "BOUND" : "NOT BOUND",
+  );
+  setText(
+    "primary-admin-activated-at",
+    account.activated_at
+      ? `Activated ${new Date(account.activated_at).toLocaleString()}`
+      : "Awaiting verified Keycloak self-claim",
+  );
+  setText(
+    "account-login-state",
+    loginEnabled ? "LOGIN ENABLED" : "LOGIN DISABLED",
+  );
+  el("account-login-state").dataset.tone = loginEnabled ? "good" : "warn";
+
+  const adminCard = el("activation-admin-card");
+  adminCard.hidden = loginEnabled;
+  if (!loginEnabled) {
+    el("admin-activation-email").value = "";
+    el("issued-activation-secret").hidden = true;
+  }
+
+  adminCard.dataset.institutionId = portfolio.institution.institution_id;
+}
+
+async function issueActivationTicket() {
+  clearError();
+  const card = el("activation-admin-card");
+  const institutionId = card.dataset.institutionId;
+  const email = el("admin-activation-email").value.trim();
+  const expires = Number(el("admin-activation-expiry").value || "48");
+
+  if (!institutionId || !email) {
+    showError("Institution and verified administrator email are required.");
+    return;
+  }
+
+  try {
+    const issued = await api.issueAdminActivationTicket(
+      institutionId,
+      email,
+      expires,
+    );
+    const output = el("issued-activation-secret");
+    output.hidden = false;
+    output.innerHTML = "";
+    const title = document.createElement("strong");
+    title.textContent = "Activation secret — display once";
+    const ticket = document.createElement("code");
+    ticket.textContent = issued.ticket_id;
+    const secret = document.createElement("code");
+    secret.textContent = issued.activation_code;
+    const expiry = document.createElement("span");
+    expiry.textContent = `Expires: ${new Date(issued.expires_at).toLocaleString()}`;
+    output.append(title, ticket, secret, expiry);
+  } catch (error) {
+    showError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function pendingActivation() {
+  return {
+    ticketId: sessionStorage.getItem("qassas.activation.ticket_id") || "",
+    code: sessionStorage.getItem("qassas.activation.code") || "",
+  };
+}
+
+function clearPendingActivation() {
+  sessionStorage.removeItem("qassas.activation.ticket_id");
+  sessionStorage.removeItem("qassas.activation.code");
+}
+
+async function activateInstitutionalAccess() {
+  clearError();
+  const ticketId = el("activation-ticket-id").value.trim();
+  const code = el("activation-code").value.trim();
+  const message = el("activation-message");
+
+  if (!ticketId || !code) {
+    showError("Activation ticket ID and one-time activation code are required.");
+    return;
+  }
+
+  sessionStorage.setItem("qassas.activation.ticket_id", ticketId);
+  sessionStorage.setItem("qassas.activation.code", code);
+
+  if (!getAccessToken()) {
+    message.hidden = false;
+    message.textContent =
+      "Sign-in is required. Your activation ticket will be claimed after Keycloak verifies your identity.";
+    await startLogin(config);
+    return;
+  }
+
+  try {
+    const result = await api.claimAdminActivationTicket(ticketId, code);
+    clearPendingActivation();
+    message.hidden = false;
+    message.textContent =
+      `Institutional access activated for ${result.institution_name}. Loading portfolio…`;
+    const token = getAccessToken();
+    const actor = actorFromToken(token);
+    setText("actor-name", actor.displayName);
+    showWorkspace();
+    await loadDirectory();
+  } catch (error) {
+    message.hidden = false;
+    message.textContent =
+      error instanceof Error ? error.message : String(error);
+    showAuth();
+  }
 }
 
 function renderAssets() {
@@ -359,6 +486,12 @@ async function boot() {
   el("release-pill").textContent = config.environmentLabel;
 
   el("login-button").addEventListener("click", () => startLogin(config));
+  el("activate-button").addEventListener("click", () => {
+    void activateInstitutionalAccess();
+  });
+  el("issue-activation-button").addEventListener("click", () => {
+    void issueActivationTicket();
+  });
   el("logout-button").addEventListener("click", () => {
     clearSession();
     window.location.reload();
@@ -383,12 +516,30 @@ async function boot() {
       return;
     }
 
+    const pending = pendingActivation();
+    if (pending.ticketId && pending.code) {
+      el("activation-ticket-id").value = pending.ticketId;
+      el("activation-code").value = pending.code;
+      await activateInstitutionalAccess();
+      return;
+    }
+
     const actor = actorFromToken(token);
     setText("actor-name", actor.displayName);
     showWorkspace();
     await loadDirectory();
   } catch (error) {
     if (error?.code === "AUTH_REQUIRED") {
+      const token = getAccessToken();
+      if (token) {
+        const actor = actorFromToken(token);
+        setText("actor-name", actor.displayName);
+        el("activation-message").hidden = false;
+        el("activation-message").textContent =
+          "Keycloak identity verified. QASSAS institutional access is not active yet; enter your activation ticket below.";
+        showAuth();
+        return;
+      }
       clearSession();
       showAuth();
       return;
