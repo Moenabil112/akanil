@@ -28,7 +28,8 @@
     "o2:promotion-bundle": "node scripts/o2-promotion-bundle.mjs",
     "db:seed:institutions": "node scripts/seed-institutional-portfolios.mjs",
     "workbench:serve": "node workbench/server.mjs",
-    "o3:workbench-check": "node scripts/o3-workbench-check.mjs"
+    "o3:workbench-check": "node scripts/o3-workbench-check.mjs",
+    "e2e:o3-institutional-isolation": "node scripts/e2e-o3-institutional-isolation.mjs"
   },
   "engines": {
     "node": ">=22"
