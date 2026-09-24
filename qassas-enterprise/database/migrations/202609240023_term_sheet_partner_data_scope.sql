@@ -248,6 +248,92 @@ CREATE TRIGGER source_ingestion_record_contract_scope
 BEFORE INSERT ON qassas_core.source_ingestion_record
 FOR EACH ROW EXECUTE FUNCTION qassas_core.enforce_ingestion_record_contract_scope();
 
+CREATE OR REPLACE FUNCTION qassas_core.validate_private_source_connection()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+DECLARE
+  v_portfolio_institution text;
+  v_agreement_institution text;
+  v_agreement_status text;
+  v_effective_from timestamptz;
+  v_effective_to timestamptz;
+  v_source_class text;
+BEGIN
+  SELECT institution_id
+    INTO v_portfolio_institution
+    FROM qassas_core.institution_portfolio
+   WHERE portfolio_id = NEW.portfolio_id;
+
+  SELECT institution_id, agreement_status, effective_from, effective_to
+    INTO v_agreement_institution, v_agreement_status, v_effective_from, v_effective_to
+    FROM qassas_core.institution_access_agreement
+   WHERE agreement_id = NEW.agreement_id;
+
+  SELECT source_class
+    INTO v_source_class
+    FROM qassas_core.data_source_registry
+   WHERE source_id = NEW.source_id;
+
+  IF v_portfolio_institution IS NULL
+     OR v_agreement_institution IS NULL
+     OR v_portfolio_institution <> v_agreement_institution THEN
+    RAISE EXCEPTION 'Agreement institution does not match portfolio institution';
+  END IF;
+
+  IF v_source_class <> 'PRIVATE_CONTRACTUAL' THEN
+    RAISE EXCEPTION 'Private source connection requires PRIVATE_CONTRACTUAL source';
+  END IF;
+
+  IF NEW.connection_status = 'CONNECTED'
+     AND (
+       v_agreement_status <> 'ACTIVE'
+       OR v_effective_from IS NULL
+       OR v_effective_from > now()
+       OR (v_effective_to IS NOT NULL AND v_effective_to <= now())
+     ) THEN
+    RAISE EXCEPTION 'Connected private source requires currently active agreement';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS portfolio_private_source_connection_guard
+  ON qassas_core.portfolio_private_source_connection;
+CREATE TRIGGER portfolio_private_source_connection_guard
+BEFORE INSERT OR UPDATE ON qassas_core.portfolio_private_source_connection
+FOR EACH ROW EXECUTE FUNCTION qassas_core.validate_private_source_connection();
+
+CREATE OR REPLACE FUNCTION qassas_core.suspend_connections_for_ended_agreement()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.agreement_status IN ('EXPIRED','TERMINATED')
+     AND OLD.agreement_status IS DISTINCT FROM NEW.agreement_status THEN
+    UPDATE qassas_core.portfolio_private_source_connection
+       SET connection_status = 'SUSPENDED',
+           suspended_at = now()
+     WHERE agreement_id = NEW.agreement_id
+       AND connection_status = 'CONNECTED';
+
+    UPDATE qassas_core.portfolio_data_source
+       SET access_status = 'AGREEMENT_REQUIRED'
+     WHERE agreement_id = NEW.agreement_id
+       AND access_status = 'CONNECTED';
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS institution_access_agreement_suspend_connections
+  ON qassas_core.institution_access_agreement;
+CREATE TRIGGER institution_access_agreement_suspend_connections
+AFTER UPDATE OF agreement_status ON qassas_core.institution_access_agreement
+FOR EACH ROW EXECUTE FUNCTION qassas_core.suspend_connections_for_ended_agreement();
+
 CREATE OR REPLACE VIEW qassas_core.portfolio_data_pipeline_status AS
 SELECT
   p.portfolio_id,
