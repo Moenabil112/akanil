@@ -209,4 +209,73 @@ ON CONFLICT (portfolio_id, source_id) DO UPDATE
 SET access_status = EXCLUDED.access_status,
     allowed_domains = EXCLUDED.allowed_domains;
 
+
+INSERT INTO qassas_core.source_adapter_contract (
+  adapter_id, source_id, adapter_kind, endpoint_class, endpoint_value,
+  content_format, adapter_status, refresh_policy, configuration
+)
+VALUES
+  (
+    'ADP-SGS-NGD-CATALOG',
+    'SRC-SGS-NGD',
+    'OGC_CATALOG',
+    'PUBLIC_URL',
+    'https://ngd.sgs.gov.sa/',
+    'OGC_CATALOG',
+    'AVAILABLE_READ_ONLY',
+    'ON_DEMAND',
+    '{"capabilities":["WFS","WMS","WCS","GeoRSS"],"endpoint_discovery":"CATALOG_DRIVEN","raw_payload_storage":false}'::jsonb
+  ),
+  (
+    'ADP-SGS-NGD-WFS',
+    'SRC-SGS-NGD',
+    'OGC_WFS',
+    'ENV_REFERENCE',
+    'SGS_NGD_WFS_URL',
+    'GML_GEOJSON',
+    'CONFIG_REQUIRED',
+    'SCHEDULED_DAILY',
+    '{"require_get_capabilities":true,"allowed_protocol":"HTTPS","raw_payload_storage":false}'::jsonb
+  ),
+  (
+    'ADP-TAADEN-LICENCE-PAGE',
+    'SRC-TAADEN',
+    'PUBLIC_RECORD_PAGE',
+    'PUBLIC_URL',
+    'https://taadeen.sa/en/mining-info/licenses/{license_number}',
+    'HTML_PUBLIC_RECORD',
+    'AVAILABLE_READ_ONLY',
+    'SCHEDULED_DAILY',
+    '{"record_key":"license_number","robots_and_terms_review_required":true,"raw_payload_storage":false}'::jsonb
+  ),
+  (
+    'ADP-TAADEN-INVESTOR-PAGE',
+    'SRC-TAADEN',
+    'PUBLIC_RECORD_PAGE',
+    'PUBLIC_URL',
+    'https://taadeen.sa/en/mining-info/investors/{unified_number}',
+    'HTML_PUBLIC_RECORD',
+    'AVAILABLE_READ_ONLY',
+    'SCHEDULED_DAILY',
+    '{"record_key":"unified_number","robots_and_terms_review_required":true,"raw_payload_storage":false}'::jsonb
+  ),
+  (
+    'ADP-PARTNER-DATAROOM',
+    'SRC-PARTNER-TERM-SHEET',
+    'PARTNER_DATA_ROOM',
+    'CONTRACTUAL_ENDPOINT',
+    NULL,
+    'CONTROLLED_FILE_OR_API',
+    'TERM_SHEET_REQUIRED',
+    'ON_DEMAND',
+    '{"malware_scan_required":true,"checksum_required":true,"raw_payload_storage":"CONTROLLED_OBJECT_STORE_ONLY"}'::jsonb
+  )
+ON CONFLICT (adapter_id) DO UPDATE
+SET endpoint_value = EXCLUDED.endpoint_value,
+    content_format = EXCLUDED.content_format,
+    adapter_status = EXCLUDED.adapter_status,
+    refresh_policy = EXCLUDED.refresh_policy,
+    configuration = EXCLUDED.configuration,
+    updated_at = now();
+
 COMMIT;
