@@ -22,9 +22,26 @@ export class QassasApi {
       },
     });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       const error = new Error("AUTH_REQUIRED");
       error.code = "AUTH_REQUIRED";
+      throw error;
+    }
+
+    const text = await response.text();
+    let body = null;
+    if (text) {
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = text;
+      }
+    }
+
+    if (response.status === 403) {
+      const error = new Error(body?.message || "FORBIDDEN");
+      error.code = "FORBIDDEN";
+      error.status = 403;
       throw error;
     }
 
@@ -33,9 +50,6 @@ export class QassasApi {
       error.code = "NOT_FOUND";
       throw error;
     }
-
-    const text = await response.text();
-    const body = text ? JSON.parse(text) : null;
 
     if (!response.ok) {
       const error = new Error(body?.message || `QASSAS API returned ${response.status}`);
@@ -69,6 +83,41 @@ export class QassasApi {
   assets(portfolioId) {
     return this.request(
       `/data-pipeline/portfolios/${encodeURIComponent(portfolioId)}/assets`,
+    );
+  }
+
+  onboardingStatus(institutionId) {
+    return this.request(
+      `/institutional-onboarding/institutions/${encodeURIComponent(institutionId)}/status`,
+    );
+  }
+
+  issueAdminActivationTicket(institutionId, expectedEmail, expiresInHours = 48) {
+    return this.request(
+      `/institutional-onboarding/institutions/${encodeURIComponent(institutionId)}/admin-activation-tickets`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          expected_email: expectedEmail,
+          expires_in_hours: expiresInHours,
+        }),
+      },
+    );
+  }
+
+  latestAdminActivationTicket(institutionId) {
+    return this.request(
+      `/institutional-onboarding/institutions/${encodeURIComponent(institutionId)}/admin-activation-tickets/latest`,
+    );
+  }
+
+  claimAdminActivationTicket(ticketId, activationCode) {
+    return this.request(
+      `/institutional-onboarding/admin-activation-tickets/${encodeURIComponent(ticketId)}/claim`,
+      {
+        method: "POST",
+        body: JSON.stringify({ activation_code: activationCode }),
+      },
     );
   }
 }
