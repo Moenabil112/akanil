@@ -31,7 +31,7 @@ jobs:
           cache: "npm"
           cache-dependency-path: qassas-enterprise/package.json
 
-      - name: Install
+      - name: Install and materialize dependency lock
         run: npm install
 
       - name: Typecheck
@@ -60,10 +60,146 @@ jobs:
             openpolicyagent/opa:1.20.2 \
             test /policies -v
 
-      - name: Upload security evidence
+      - name: Upload dependency and security evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: qassas-operational-security-evidence
-          path: qassas-enterprise/npm-audit.json
+          path: |
+            qassas-enterprise/npm-audit.json
+            qassas-enterprise/package-lock.json
           if-no-files-found: error
+
+  runtime-readiness:
+    needs: operational-readiness
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qassas-enterprise
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: qassas-enterprise/package.json
+
+      - name: Install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare runtime environment
+        run: |
+          cp .env.example .env.ops-ci
+          sed -i 's/^QASSAS_ENVIRONMENT=.*/QASSAS_ENVIRONMENT=ci/' .env.ops-ci
+          sed -i "s/^QASSAS_RELEASE_ID=.*/QASSAS_RELEASE_ID=${GITHUB_SHA}/" .env.ops-ci
+
+      - name: Start control plane
+        run: |
+          set -a
+          source .env.ops-ci
+          set +a
+          docker compose --env-file .env.ops-ci -f infra/local/docker-compose.yml up -d
+
+      - name: Wait for control plane
+        run: |
+          set -a
+          source .env.ops-ci
+          set +a
+
+          for i in {1..60}; do
+            if docker compose --env-file .env.ops-ci -f infra/local/docker-compose.yml \
+              exec -T postgres pg_isready -U "$QASSAS_DB_USER" -d "$QASSAS_DB_NAME"; then
+              break
+            fi
+            sleep 2
+          done
+
+          npm run temporal:wait
+
+          for i in {1..90}; do
+            if curl --silent --fail "$KEYCLOAK_ISSUER/.well-known/openid-configuration" >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --silent --fail "$KEYCLOAK_ISSUER/.well-known/openid-configuration" >/dev/null
+
+          for i in {1..60}; do
+            if curl --silent --fail "$OPA_URL/health?plugins" >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --silent --fail "$OPA_URL/health?plugins" >/dev/null
+
+      - name: Apply canonical migrations
+        run: |
+          set -a
+          source .env.ops-ci
+          set +a
+          npm run db:migrate
+
+      - name: Start QASSAS API
+        run: |
+          set -a
+          source .env.ops-ci
+          set +a
+          npm --workspace @qassas/api run start > /tmp/qassas-api.log 2>&1 &
+          echo $! > /tmp/qassas-api.pid
+
+          for i in {1..60}; do
+            if curl --silent --fail http://127.0.0.1:3001/api/v1/health/live >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          cat /tmp/qassas-api.log || true
+          exit 1
+
+      - name: Verify active runtime readiness
+        run: |
+          set -a
+          source .env.ops-ci
+          set +a
+
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/ready | tee /tmp/qassas-ready.json
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/business-controls | tee /tmp/qassas-controls.json
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/release | tee /tmp/qassas-release.json
+
+          node - <<'NODE'
+          const fs = require("fs");
+          const ready = JSON.parse(fs.readFileSync("/tmp/qassas-ready.json", "utf8"));
+          const controls = JSON.parse(fs.readFileSync("/tmp/qassas-controls.json", "utf8"));
+          const release = JSON.parse(fs.readFileSync("/tmp/qassas-release.json", "utf8"));
+
+          const failures = [];
+          if (ready.status !== "HEALTHY" || ready.ready !== true) failures.push("readiness");
+          for (const key of ["database", "migrations", "iam", "opa", "temporal"]) {
+            if (ready[key] !== "HEALTHY") failures.push(key);
+          }
+          if (controls.controlled_writes_ready !== true) failures.push("controlled_writes");
+          if (release.release_id !== process.env.GITHUB_SHA) failures.push("release_identity");
+
+          if (failures.length) {
+            console.error("Runtime readiness failed:", failures.join(", "));
+            process.exit(1);
+          }
+          NODE
+
+      - name: Runtime diagnostics
+        if: failure()
+        run: |
+          echo "=== API LOG ==="
+          cat /tmp/qassas-api.log || true
+          echo "=== CONTAINER LOGS ==="
+          docker compose --env-file .env.ops-ci -f infra/local/docker-compose.yml logs --no-color || true
+
+      - name: Stop control plane
+        if: always()
+        run: docker compose --env-file .env.ops-ci -f infra/local/docker-compose.yml down -v
