@@ -44,6 +44,8 @@ for (const required of [
   "/data-pipeline/portfolios/",
   "/institutional-onboarding/institutions/",
   "/admin-activation-tickets",
+  "/agreements",
+  "/sources/",
 ]) {
   assert.ok(api.includes(required), `Workbench API client missing route: ${required}`);
 }
@@ -82,6 +84,18 @@ assert.ok(
   app.includes("qassas.activation.ticket_id"),
   "Activation must survive the OIDC redirect in sessionStorage",
 );
+assert.ok(
+  app.includes("recordPartnerAgreement"),
+  "Workbench must implement Term Sheet recording flow",
+);
+assert.ok(
+  app.includes("connectPartnerSource"),
+  "Workbench must implement explicit private-source activation",
+);
+assert.ok(
+  app.includes("allowed_domains"),
+  "Workbench must surface contract-scoped allowed domains",
+);
 assert.ok(css.includes("@media (max-width: 780px)"), "Mobile breakpoint is required");
 
 const webClient = realm.clients.find((client) => client.clientId === "qassas-web");
@@ -117,6 +131,9 @@ console.log(
       private_term_sheet_surface: "PASS",
       institutional_admin_activation_ui: "PASS",
       activation_redirect_state: "SESSION_ONLY",
+      term_sheet_registry_ui: "PASS",
+      partner_source_activation_ui: "PASS",
+      contract_scope_visibility: "PASS",
     },
     null,
     2,
