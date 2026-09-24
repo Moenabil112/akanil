@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DataPipelineModule } from "./data-pipeline/data-pipeline.module";
 import { DecisionModule } from "./decision/decision.module";
+import { InstitutionOnboardingModule } from "./institutional-onboarding/institution-onboarding.module";
 import { EvidenceModule } from "./evidence/evidence.module";
 import { HealthController } from "./health/health.controller";
 import { InstitutionalPortfolioModule } from "./institutional-portfolio/institutional-portfolio.module";
@@ -29,6 +30,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     DataPipelineModule,
     TargetModule,
     EvidenceModule,
+    InstitutionOnboardingModule,
     InstitutionalPortfolioModule,
     RecommendationModule,
     RightsModule,
