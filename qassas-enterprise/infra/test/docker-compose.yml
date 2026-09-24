@@ -27,7 +27,7 @@ services:
       POSTGRES_USER: ${QASSAS_DB_USER}
       POSTGRES_PASSWORD: ${QASSAS_DB_PASSWORD}
     volumes:
-      - qassas-test-db:/var/lib/postgresql/data
+      - qassas-test-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${QASSAS_DB_USER} -d ${QASSAS_DB_NAME}"]
       interval: 5s
