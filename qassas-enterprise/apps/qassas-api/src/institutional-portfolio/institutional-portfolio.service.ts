@@ -26,7 +26,7 @@ interface PortfolioRow {
   term_sheet_required_count: number;
 }
 
-interface SourceRow {
+export interface SourceRow {
   source_id: string;
   source_name: string;
   source_authority: string;
