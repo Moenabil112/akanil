@@ -16,6 +16,38 @@ permissions:
   contents: read
 
 jobs:
+  lockfile-bootstrap:
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Materialize lockfile once
+        run: |
+          if git ls-files --error-unmatch qassas-enterprise/package-lock.json >/dev/null 2>&1; then
+            echo "package-lock.json already tracked"
+            exit 0
+          fi
+
+          cd qassas-enterprise
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          cd ..
+
+          git config user.name "qassas-ops-bot"
+          git config user.email "qassas-ops-bot@users.noreply.github.com"
+          git add qassas-enterprise/package-lock.json
+          git commit -m "build(ops): lock QASSAS dependency graph"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
   operational-readiness:
     runs-on: ubuntu-latest
     defaults:
