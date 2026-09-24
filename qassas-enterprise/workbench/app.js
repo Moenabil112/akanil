@@ -19,6 +19,7 @@ const state = {
   pipeline: null,
   assets: [],
   onboarding: null,
+  agreements: [],
   assetFilter: "",
 };
 
@@ -111,16 +112,18 @@ async function loadPortfolio(portfolioId) {
   sessionStorage.setItem("qassas.workbench.portfolio_id", portfolioId);
 
   const portfolio = await api.portfolio(portfolioId);
-  const [pipeline, assets, onboarding] = await Promise.all([
+  const [pipeline, assets, onboarding, agreements] = await Promise.all([
     api.pipelineStatus(portfolioId),
     api.assets(portfolioId),
     api.onboardingStatus(portfolio.institution.institution_id),
+    api.agreements(portfolio.institution.institution_id),
   ]);
 
   state.selectedPortfolio = portfolio;
   state.pipeline = pipeline;
   state.assets = assets.assets || [];
   state.onboarding = onboarding;
+  state.agreements = agreements.agreements || [];
 
   renderPortfolio();
 }
@@ -443,43 +446,204 @@ function renderSources(pipeline) {
 }
 
 function renderPartnerLayer(portfolio, pipeline) {
-  const locked = (pipeline.sources || []).filter(
+  const privateSource = (pipeline.sources || []).find(
     (source) => source.source_class === "PRIVATE_CONTRACTUAL",
   );
   const container = el("partner-state");
+  const agreements = state.agreements || [];
+  const activeAgreements = agreements.filter(
+    (agreement) => agreement.agreement_status === "ACTIVE",
+  );
 
-  if (locked.some((source) => source.access_status === "CONNECTED")) {
-    container.innerHTML = `
-      <div class="partner-connected">
-        <div>
-          <strong>Private partner source connected</strong>
-          <p>Contractual datasets may now be ingested under their allowed domains and security classifications.</p>
-        </div>
-        ${pill("CONNECTED", "good")}
-      </div>
-    `;
+  if (!privateSource) {
+    container.innerHTML =
+      '<div class="empty-inline">No private contractual source is configured.</div>';
     return;
   }
 
+  const agreementRows = agreements.length
+    ? agreements
+        .map(
+          (agreement) => `
+            <div class="contract-row">
+              <div>
+                <strong>${escapeHtml(agreement.agreement_type)}</strong>
+                <span>${escapeHtml(agreement.agreement_id)}</span>
+              </div>
+              <div class="contract-domains">
+                ${(agreement.allowed_domains || [])
+                  .map((domain) => pill(domain, "neutral"))
+                  .join("") || pill("NO DATA SCOPE", "warn")}
+              </div>
+              ${pill(
+                humanize(agreement.agreement_status),
+                statusTone(agreement.agreement_status),
+              )}
+            </div>
+          `,
+        )
+        .join("")
+    : '<div class="empty-inline">No institutional access agreement has been recorded yet.</div>';
+
+  const connection = privateSource.connection;
+  const connectionState = connection?.status || privateSource.access_status;
+  const connected = connection?.status === "CONNECTED";
+
   container.innerHTML = `
-    <div class="locked-layer">
-      <div class="lock-icon" aria-hidden="true">⌁</div>
+    <div class="${connected ? "partner-connected" : "locked-layer"}">
+      <div class="lock-icon" aria-hidden="true">${connected ? "✓" : "⌁"}</div>
       <div>
-        <strong>Private institutional layer is locked</strong>
+        <strong>${connected ? "Private partner source connected" : "Private institutional layer is locked"}</strong>
         <p>
-          Work programmes, private geology, assays, drilling, capital, JV rights,
-          commercial terms and internal decisions remain unavailable until the
-          institution's Term Sheet / data-sharing basis is activated.
+          ${connected
+            ? "Contractual datasets may be ingested only inside the agreement-scoped data domains shown below."
+            : "Partner data remains unavailable until an active Term Sheet or approved data-sharing agreement is bound to this portfolio."}
         </p>
       </div>
-      ${pill(
-        portfolio.data_readiness.term_sheet_required_count > 0
-          ? "TERM SHEET REQUIRED"
-          : "NO PRIVATE SOURCE",
-        "warn",
-      )}
+      ${pill(humanize(connectionState), connected ? "good" : "warn")}
+    </div>
+
+    <div class="contract-summary">
+      <div class="contract-summary-head">
+        <div>
+          <span class="surface-kicker">Agreement registry</span>
+          <strong>${agreements.length} recorded agreement${agreements.length === 1 ? "" : "s"}</strong>
+        </div>
+        <div>
+          <span class="surface-kicker">Bound agreement</span>
+          <strong>${escapeHtml(privateSource.agreement_id || "None")}</strong>
+        </div>
+        <div>
+          <span class="surface-kicker">Effective private scope</span>
+          <strong>${(privateSource.allowed_domains || []).length} domain${(privateSource.allowed_domains || []).length === 1 ? "" : "s"}</strong>
+        </div>
+      </div>
+      <div class="contract-list">${agreementRows}</div>
+    </div>
+
+    <div class="contract-control">
+      <div class="section-heading compact-heading">
+        <div>
+          <div class="eyebrow">Platform contract control</div>
+          <h3>Term Sheet / Data Sharing Activation</h3>
+        </div>
+        ${pill("SYSTEM ADMIN REQUIRED", "warn")}
+      </div>
+
+      <div class="contract-control-grid">
+        <div class="contract-form">
+          <label class="label" for="contract-document-ref">Document reference</label>
+          <input id="contract-document-ref" class="input" type="text" placeholder="TERM-SHEET://INSTITUTION/REV" />
+          <label class="label" for="contract-document-hash">SHA-256 document hash</label>
+          <input id="contract-document-hash" class="input" type="text" placeholder="64 hex characters" />
+          <label class="label" for="contract-domains">Allowed data domains</label>
+          <input id="contract-domains" class="input" type="text" placeholder="ASSAYS, PRIVATE_GEOLOGY" />
+          <button id="record-contract-button" class="button button-primary" type="button">
+            Record active Term Sheet
+          </button>
+        </div>
+
+        <div class="contract-form">
+          <label class="label" for="contract-agreement-select">Active agreement</label>
+          <select id="contract-agreement-select" class="select">
+            <option value="">Select active agreement</option>
+            ${activeAgreements
+              .map(
+                (agreement) =>
+                  `<option value="${escapeHtml(agreement.agreement_id)}">${escapeHtml(
+                    agreement.agreement_id,
+                  )} — ${escapeHtml(agreement.agreement_type)}</option>`,
+              )
+              .join("")}
+          </select>
+          <div class="contract-scope-preview">
+            <span>Source</span>
+            <strong>${escapeHtml(privateSource.source_name)}</strong>
+            <span>Current state</span>
+            <strong>${escapeHtml(humanize(connectionState))}</strong>
+          </div>
+          <button id="connect-private-source-button" class="button button-primary" type="button">
+            Activate private source
+          </button>
+        </div>
+      </div>
+      <div id="contract-control-message" class="activation-message" hidden></div>
     </div>
   `;
+
+  el("record-contract-button")?.addEventListener("click", () => {
+    void recordPartnerAgreement(portfolio);
+  });
+  el("connect-private-source-button")?.addEventListener("click", () => {
+    void connectPartnerSource(portfolio, privateSource);
+  });
+}
+
+async function recordPartnerAgreement(portfolio) {
+  clearError();
+  const message = el("contract-control-message");
+  const documentRef = el("contract-document-ref")?.value.trim();
+  const documentHash = el("contract-document-hash")?.value.trim().toLowerCase();
+  const allowedDomains = (el("contract-domains")?.value || "")
+    .split(",")
+    .map((domain) => domain.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (!documentRef || !/^[a-f0-9]{64}$/.test(documentHash || "")) {
+    showError("Document reference and a valid SHA-256 document hash are required.");
+    return;
+  }
+  if (allowedDomains.length === 0) {
+    showError("At least one private data domain must be authorised.");
+    return;
+  }
+
+  try {
+    const agreement = await api.recordAgreement({
+      institution_id: portfolio.institution.institution_id,
+      agreement_type: "TERM_SHEET",
+      agreement_status: "ACTIVE",
+      document_ref: documentRef,
+      document_hash: documentHash,
+      allowed_domains: allowedDomains,
+      effective_from: new Date().toISOString(),
+    });
+    message.hidden = false;
+    message.textContent =
+      `Agreement ${agreement.agreement_id} recorded. Explicit source activation is still required.`;
+    await loadPortfolio(portfolio.portfolio_id);
+  } catch (error) {
+    message.hidden = false;
+    message.textContent = error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function connectPartnerSource(portfolio, privateSource) {
+  clearError();
+  const message = el("contract-control-message");
+  const agreementId = el("contract-agreement-select")?.value;
+
+  if (!agreementId) {
+    showError("Select an active agreement before activating the private source.");
+    return;
+  }
+
+  try {
+    const result = await api.activatePrivateSource(
+      portfolio.portfolio_id,
+      privateSource.source_id,
+      agreementId,
+    );
+    message.hidden = false;
+    message.textContent =
+      `Private source connected under ${result.agreement_id}. Allowed scope: ${(
+        result.allowed_domains || []
+      ).join(", ")}.`;
+    await loadPortfolio(portfolio.portfolio_id);
+  } catch (error) {
+    message.hidden = false;
+    message.textContent = error instanceof Error ? error.message : String(error);
+  }
 }
 
 async function boot() {
