@@ -30,6 +30,8 @@ OPA readiness is verified through the OPA health endpoint.
 ### O1-R04 — Temporal readiness
 Temporal remains actively verified through GetSystemInfo.
 
+The repository Local/CI harness is pinned to `temporalio/auto-setup:1.29.7`. Because auto-setup is deprecated, protected environments are explicitly forbidden from using it. O2 supplies the supported Temporal Server/Cloud deployment profile.
+
 ### O1-R05 — Canonical migration readiness
 The API checks that the required canonical migration exists in qassas_core.schema_migration.
 
@@ -93,13 +95,14 @@ O1 is PASS only when:
 - audit remains free of Critical findings;
 - any High finding is explicitly dispositioned;
 - Pilot/Production realm profiles pass preflight;
-- Sprint 3 regression remains green under pinned runtimes.
+- Sprint 3 regression remains green under pinned Local/CI runtimes.
 
 ## 5. Next phase
 
 **O2 — TEST Deployment & Observability Baseline**
 
 Planned scope:
+- supported Temporal Server/Cloud TEST profile;
 - deployable TEST profile;
 - structured logs and correlation IDs;
 - operational metrics/SLO baseline;
