@@ -671,3 +671,118 @@ button, input, select { font: inherit; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---------------- M2 Term Sheet / partner-data controls ---------------- */
+
+.contract-summary,
+.contract-control {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.018);
+  padding: 16px;
+}
+
+.contract-summary-head {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.contract-summary-head > div,
+.contract-scope-preview {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 11px;
+  display: grid;
+  gap: 5px;
+}
+
+.contract-list {
+  display: grid;
+  gap: 8px;
+}
+
+.contract-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(260px, 2fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.contract-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.contract-row > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.contract-row span {
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.contract-domains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.compact-heading {
+  margin-bottom: 12px;
+}
+
+.compact-heading h3 {
+  margin: 4px 0 0;
+}
+
+.contract-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contract-form {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.contract-form .input,
+.contract-form .select {
+  width: 100%;
+  max-width: none;
+}
+
+.contract-scope-preview {
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  color: var(--muted);
+  font-size: .76rem;
+}
+
+.contract-scope-preview strong {
+  color: var(--text);
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .contract-summary-head,
+  .contract-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contract-row {
+    grid-template-columns: 1fr;
+  }
+}
