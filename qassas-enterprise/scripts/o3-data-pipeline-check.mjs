@@ -90,10 +90,88 @@ try {
     privateRejected = true;
     assert.match(
       error instanceof Error ? error.message : String(error),
-      /requires connected contractual access/i,
+      /requires active contractual agreement/i,
     );
   }
   assert.equal(privateRejected, true, "private source must fail closed before Term Sheet activation");
+
+  const agreementHash = createHash("sha256")
+    .update("CI-ATLAS-TERM-SHEET")
+    .digest("hex");
+
+  await client.query(
+    `INSERT INTO qassas_core.institution_access_agreement (
+       agreement_id, institution_id, agreement_type, agreement_status,
+       document_ref, document_hash, allowed_domains, effective_from
+     )
+     VALUES (
+       'AGR-CI-ATLAS',
+       'INST-ATLAS-GOLDEN-KSA',
+       'TERM_SHEET',
+       'ACTIVE',
+       'CI://atlas/term-sheet',
+       $1,
+       '["ASSAYS","DRILLING","PRIVATE_GEOLOGY"]'::jsonb,
+       now()
+     )
+     ON CONFLICT (agreement_id) DO UPDATE
+     SET agreement_status = 'ACTIVE',
+         effective_from = now(),
+         effective_to = NULL`,
+    [agreementHash],
+  );
+
+  await client.query(
+    `UPDATE qassas_core.portfolio_data_source
+        SET access_status = 'CONNECTED',
+            agreement_id = 'AGR-CI-ATLAS',
+            allowed_domains = '["ASSAYS","DRILLING","PRIVATE_GEOLOGY"]'::jsonb
+      WHERE portfolio_id = 'PORT-ATLAS-GOLDEN-KSA'
+        AND source_id = 'SRC-PARTNER-TERM-SHEET'`,
+  );
+
+  await client.query(
+    `UPDATE qassas_core.source_adapter_contract
+        SET adapter_status = 'CONNECTED',
+            updated_at = now()
+      WHERE source_id = 'SRC-PARTNER-TERM-SHEET'
+        AND adapter_kind = 'PARTNER_DATA_ROOM'`,
+  );
+
+  await client.query(
+    `INSERT INTO qassas_core.source_ingestion_run (
+       ingestion_run_id, portfolio_id, source_id, trigger_type,
+       correlation_id, status
+     )
+     VALUES (
+       'ING-CI-PRIVATE-ACTIVE',
+       'PORT-ATLAS-GOLDEN-KSA',
+       'SRC-PARTNER-TERM-SHEET',
+       'PARTNER_DELIVERY',
+       'CORR-CI-PRIVATE-ACTIVE',
+       'STARTED'
+     )
+     ON CONFLICT (ingestion_run_id) DO NOTHING`,
+  );
+
+  const privateActive = await client.query(
+    "SELECT status FROM qassas_core.source_ingestion_run WHERE ingestion_run_id = 'ING-CI-PRIVATE-ACTIVE'",
+  );
+  assert.equal(
+    privateActive.rows[0]?.status,
+    "STARTED",
+    "private ingestion must be allowed only after active contractual agreement",
+  );
+
+  const onboarding = await client.query(
+    `SELECT institution_id, login_enabled, active_agreement_count,
+            connected_private_source_count
+       FROM qassas_core.institution_onboarding_status
+      WHERE institution_id = 'INST-ATLAS-GOLDEN-KSA'`,
+  );
+  assert.equal(onboarding.rows[0].login_enabled, false);
+  assert.equal(Number(onboarding.rows[0].active_agreement_count), 1);
+  assert.equal(Number(onboarding.rows[0].connected_private_source_count), 1);
 
   await client.query(
     `INSERT INTO qassas_core.source_ingestion_run (
@@ -226,6 +304,8 @@ try {
         atlas_enterprise_scope: atlasScope.rows[0].enterprise_id,
         artar_enterprise_scope: artarScope.rows[0].enterprise_id,
         private_term_sheet_gate: "PASS",
+        private_term_sheet_activation: "PASS",
+        institutional_login_without_idp: false,
         public_ingestion_ledger: "PASS",
         public_asset_registry: "PASS",
         public_ingestion_auto_target_count: 0,
