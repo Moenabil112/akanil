@@ -255,7 +255,7 @@ FOR EACH ROW EXECUTE FUNCTION qassas_core.enforce_ingestion_record_contract_scop
 CREATE OR REPLACE FUNCTION qassas_core.validate_private_source_connection()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 DECLARE
   v_portfolio_institution text;
   v_agreement_institution text;
@@ -316,7 +316,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS portfolio_private_source_connection_guard
   ON qassas_core.portfolio_private_source_connection;
@@ -327,7 +327,7 @@ FOR EACH ROW EXECUTE FUNCTION qassas_core.validate_private_source_connection();
 CREATE OR REPLACE FUNCTION qassas_core.suspend_connections_for_ended_agreement()
 RETURNS trigger
 LANGUAGE plpgsql
-AS $
+AS $$
 BEGIN
   IF NEW.agreement_status IN ('EXPIRED','TERMINATED')
      AND OLD.agreement_status IS DISTINCT FROM NEW.agreement_status THEN
@@ -345,7 +345,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS institution_access_agreement_suspend_connections
   ON qassas_core.institution_access_agreement;
