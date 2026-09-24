@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>QASSAS Institutional Portfolio Workbench</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">Q</div>
+        <div>
+          <div class="brand-title">QASSAS</div>
+          <div class="brand-subtitle">Institutional Portfolio Workbench</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="release-pill" class="pill">TEST / UAT PREP</span>
+        <span id="actor-name" class="actor-name"></span>
+        <button id="logout-button" class="button button-ghost" type="button" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <div id="auth-screen" class="auth-screen" hidden>
+      <section class="auth-card">
+        <div class="eyebrow">Controlled institutional access</div>
+        <h1>Enter the QASSAS Workbench</h1>
+        <p>
+          Authentication uses Keycloak Authorization Code + PKCE. Portfolio visibility
+          is resolved from QASSAS institutional membership and never from a client-side
+          institution selector alone.
+        </p>
+        <button id="login-button" class="button button-primary" type="button">Sign in</button>
+      </section>
+    </div>
+
+    <div id="workspace" class="workspace" hidden>
+      <aside class="sidebar">
+        <div class="sidebar-block">
+          <label class="label" for="portfolio-select">Institution / Portfolio</label>
+          <select id="portfolio-select" class="select"></select>
+        </div>
+
+        <nav class="nav" aria-label="Workbench sections">
+          <a href="#overview" class="nav-item active">Portfolio Overview</a>
+          <a href="#assets" class="nav-item">Assets & Mineral Rights</a>
+          <a href="#data-sources" class="nav-item">Data Sources</a>
+          <a href="#decision-context" class="nav-item">Decision Context</a>
+          <a href="#partner-layer" class="nav-item">Partner Layer</a>
+        </nav>
+
+        <div class="governance-note">
+          <strong>Governance</strong>
+          <span>Scores and recommendations are advisory only.</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section id="overview" class="portfolio-header panel">
+          <div>
+            <div id="institution-kind" class="eyebrow">Institution</div>
+            <h1 id="institution-name">—</h1>
+            <p id="portfolio-name" class="muted">—</p>
+          </div>
+          <div class="header-badges">
+            <span id="scale-badge" class="pill">—</span>
+            <span id="portfolio-status" class="pill">—</span>
+            <span id="identity-status" class="pill">—</span>
+          </div>
+        </section>
+
+        <section class="metric-grid" aria-label="Portfolio summary">
+          <article class="metric-card">
+            <span class="metric-label">Public portfolio baseline</span>
+            <strong id="metric-public-assets" class="metric-value">—</strong>
+            <span id="metric-count-basis" class="metric-detail">—</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Discovered assets</span>
+            <strong id="metric-discovered-assets" class="metric-value">—</strong>
+            <span class="metric-detail">QASSAS Asset Registry</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Public data sources</span>
+            <strong id="metric-public-sources" class="metric-value">—</strong>
+            <span class="metric-detail">NGD + Taadeen baseline</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Contractual sources locked</span>
+            <strong id="metric-term-sheet" class="metric-value">—</strong>
+            <span class="metric-detail">Partner / private layer</span>
+          </article>
+        </section>
+
+        <section id="adaptive-surface" class="panel adaptive-surface">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Adaptive portfolio surface</div>
+              <h2 id="surface-title">Portfolio Control</h2>
+            </div>
+            <span id="surface-mode" class="pill">—</span>
+          </div>
+          <div id="surface-body" class="surface-body"></div>
+        </section>
+
+        <section id="assets" class="panel">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Public + partner-confirmed master data</div>
+              <h2>Asset Registry</h2>
+            </div>
+            <input id="asset-search" class="input" type="search" placeholder="Filter assets…" />
+          </div>
+          <div id="asset-table-wrap" class="table-wrap"></div>
+        </section>
+
+        <section id="data-sources" class="panel">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Provenance-first ingestion</div>
+              <h2>Data Pipeline</h2>
+            </div>
+          </div>
+          <div id="source-grid" class="source-grid"></div>
+        </section>
+
+        <section id="decision-context" class="panel split-panel">
+          <div>
+            <div class="eyebrow">Architecture Lock</div>
+            <h2>Decision Authority</h2>
+            <p class="muted">
+              Public source ingestion can discover or refresh an Asset Record.
+              It cannot create a geological Target, change a Gate, release capital,
+              satisfy JV consent, or approve a Decision.
+            </p>
+          </div>
+          <div class="control-stack">
+            <div class="control-row"><span>Asset discovery</span><strong>Automatable</strong></div>
+            <div class="control-row"><span>Target promotion</span><strong>Human review</strong></div>
+            <div class="control-row"><span>Decision approval</span><strong>Governed</strong></div>
+            <div class="control-row"><span>Capital release</span><strong>Governed</strong></div>
+          </div>
+        </section>
+
+        <section id="partner-layer" class="panel">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Private institutional context</div>
+              <h2>Partner & Term Sheet Layer</h2>
+            </div>
+          </div>
+          <div id="partner-state" class="partner-state"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="error-banner" class="error-banner" hidden></div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
