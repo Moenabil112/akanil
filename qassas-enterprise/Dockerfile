@@ -1,4 +1,4 @@
-FROM node:22.23.2-alpine3.23 AS build
+FROM node:22.23.2-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -21,13 +21,19 @@ COPY keycloak ./keycloak
 RUN npm run build
 RUN npm prune --omit=dev
 
-FROM node:22.23.2-alpine3.23 AS runtime
+FROM node:22.23.2-bookworm-slim AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production
+
+RUN apt-get update \
+  && apt-get upgrade -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /usr/local/lib/node_modules/npm \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 COPY --from=build --chown=node:node /app /app
 
 USER node
 
-CMD ["npm", "--workspace", "@qassas/api", "run", "start"]
+CMD ["node", "apps/qassas-api/dist/main.js"]
