@@ -5,7 +5,8 @@ import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DecisionModule } from "./decision/decision.module";
 import { EvidenceModule } from "./evidence/evidence.module";
-import { HealthController } from "./health/health.controller";\nimport { InstitutionalPortfolioModule } from "./institutional-portfolio/institutional-portfolio.module";
+import { HealthController } from "./health/health.controller";
+import { InstitutionalPortfolioModule } from "./institutional-portfolio/institutional-portfolio.module";
 import { OutboxModule } from "./outbox/outbox.module";
 import { MultiAssetModule } from "./multi-asset/multi-asset.module";
 import { ObservabilityModule } from "./observability/observability.module";
@@ -26,6 +27,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     CapitalModule,
     TargetModule,
     EvidenceModule,
+    InstitutionalPortfolioModule,
     RecommendationModule,
     RightsModule,
     PortfolioControlModule,
