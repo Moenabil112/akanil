@@ -99,6 +99,7 @@ jobs:
           npm run db:seed:abu-salal
           npm run db:seed:sprint2
           npm run db:seed:sprint3
+          npm run db:seed:institutions
 
       - name: Start Temporal worker and QASSAS API
         run: |
@@ -180,6 +181,13 @@ jobs:
           source .env
           set +a
           npm run e2e:sprint3-portfolio
+
+      - name: Execute E2E-O3-INSTITUTIONAL-ISOLATION-001
+        run: |
+          set -a
+          source .env
+          set +a
+          npm run e2e:o3-institutional-isolation
 
       - name: Show diagnostics
         if: failure()
