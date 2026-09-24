@@ -1,0 +1,119 @@
+name: QASSAS O2 TEST Deployment & Observability
+
+on:
+  push:
+    branches:
+      - "qassas/operationalisation-o2-**"
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-o2-test-deployment.yml"
+  pull_request:
+    paths:
+      - "qassas-enterprise/**"
+      - ".github/workflows/qassas-o2-test-deployment.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: qassas-enterprise
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: qassas-enterprise/package-lock.json
+
+      - name: Install locked dependency graph
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare protected TEST environment
+        run: |
+          cp infra/test/.env.example infra/test/.env.test
+          sed -i "s/^QASSAS_RELEASE_ID=.*/QASSAS_RELEASE_ID=${GITHUB_SHA}/" infra/test/.env.test
+
+      - name: TEST operational preflight
+        run: node scripts/ops-preflight.mjs infra/test/.env.test
+
+      - name: Validate Compose model
+        run: docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml config >/tmp/qassas-o2-compose.yml
+
+      - name: Start TEST environment
+        run: docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml up -d --build
+
+      - name: Wait for QASSAS TEST readiness
+        run: |
+          for i in {1..120}; do
+            code=$(curl --silent --output /dev/null --write-out "%{http_code}" http://127.0.0.1:3001/api/v1/health/ready || true)
+            if [ "$code" = "200" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml ps
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml logs --no-color
+          exit 1
+
+      - name: Capture readiness evidence
+        run: |
+          mkdir -p artifacts/o2
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/ready > artifacts/o2/ready.json
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/business-controls > artifacts/o2/business-controls.json
+          curl --silent --fail http://127.0.0.1:3001/api/v1/health/release > artifacts/o2/release.json
+
+      - name: Verify SLO baseline
+        run: |
+          set -a
+          source infra/test/.env.test
+          set +a
+          npm run o2:slo
+
+      - name: Verify fail-closed recovery
+        run: sh scripts/o2-failure-recovery-drill.sh
+
+      - name: Verify backup and restore
+        run: sh scripts/o2-backup-restore-proof.sh
+
+      - name: Capture metrics after drills
+        run: curl --silent --fail http://127.0.0.1:3001/api/v1/observability/metrics > artifacts/o2/metrics.json
+
+      - name: Build promotion evidence bundle
+        run: |
+          set -a
+          source infra/test/.env.test
+          set +a
+          npm run o2:promotion-bundle
+
+      - name: Capture deployment state
+        if: always()
+        run: |
+          mkdir -p artifacts/o2
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml ps --all > artifacts/o2/compose-ps.txt || true
+          docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml logs --no-color > artifacts/o2/compose.log || true
+          cp /tmp/qassas-o2-compose.yml artifacts/o2/rendered-compose.yml || true
+
+      - name: Upload O2 promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qassas-o2-test-promotion-evidence
+          path: qassas-enterprise/artifacts/o2
+          if-no-files-found: warn
+
+      - name: Stop TEST environment
+        if: always()
+        run: docker compose --env-file infra/test/.env.test -f infra/test/docker-compose.yml down -v --remove-orphans
