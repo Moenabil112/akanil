@@ -113,7 +113,7 @@ try {
   );
 
   const payloadHash = createHash("sha256")
-    .update("TAADEN:1444345:2026-09-07")
+    .update("TAADEN:CI-LIC-001:2026-09-07")
     .digest("hex");
 
   await client.query(
@@ -124,18 +124,18 @@ try {
        security_class, provenance
      )
      VALUES (
-       'IR-CI-TAADEN-1444345',
+       'IR-CI-TAADEN-CI-LIC-001',
        'ING-CI-TAADEN-ARTAR',
-       '1444345',
+       'CI-LIC-001',
        'EXPLORATION_LICENCE',
        '2026-09-07',
        now(),
        $1,
        'PORTFOLIO_ASSET',
-       'AST-CI-ARTAR-1444345',
+       'AST-CI-ARTAR-LIC001',
        'ACCEPTED',
        'C0_PUBLIC',
-       '{"source_url":"https://taadeen.sa/en/mining-info/licenses/1444345","source_authority":"Ministry of Industry and Mineral Resources"}'::jsonb
+       '{"source_url":"https://taadeen.sa/en/mining-info/licenses/CI-LIC-001","source_authority":"Ministry of Industry and Mineral Resources"}'::jsonb
      )
      ON CONFLICT (ingestion_record_id) DO NOTHING`,
     [payloadHash],
@@ -164,17 +164,17 @@ try {
        security_class, public_data_last_seen_at
      )
      VALUES (
-       'AST-CI-ARTAR-1444345',
+       'AST-CI-ARTAR-LIC001',
        'PORT-ARTAR-KSA',
        'ENT-ARTAR-KSA',
-       'Taadeen Exploration Licence 1444345',
+       'CI Synthetic Public Licence',
        'EXPLORATION_LICENCE',
-       '1444345',
-       'Aseer',
-       44.82,
+       'CI-LIC-001',
+       'Riyadh',
+       12.5,
        '["CLASS_A"]'::jsonb,
        'SRC-TAADEN',
-       '1444345',
+       'CI-LIC-001',
        'PUBLIC_VERIFIED',
        'C0_PUBLIC',
        now()
@@ -189,8 +189,8 @@ try {
      )
      VALUES (
        'SRC-TAADEN',
-       '1444345',
-       'AST-CI-ARTAR-1444345',
+       'CI-LIC-001',
+       'AST-CI-ARTAR-LIC001',
        'EXACT_PUBLIC_ID',
        1,
        now()
@@ -200,7 +200,7 @@ try {
   );
 
   const targetCheck = await client.query(
-    "SELECT count(*)::int AS target_count FROM qassas_core.target WHERE asset_id = 'AST-CI-ARTAR-1444345'",
+    "SELECT count(*)::int AS target_count FROM qassas_core.target WHERE asset_id = 'AST-CI-ARTAR-LIC001'",
   );
   assert.equal(
     targetCheck.rows[0].target_count,
