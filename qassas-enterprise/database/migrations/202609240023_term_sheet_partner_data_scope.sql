@@ -132,7 +132,11 @@ BEGIN
     a.agreement_status,
     a.effective_from,
     a.effective_to,
-    s.allowed_domains,
+    CASE
+      WHEN r.source_class = 'PRIVATE_CONTRACTUAL'
+        THEN COALESCE(c.allowed_domains, '[]'::jsonb)
+      ELSE s.allowed_domains
+    END,
     c.connection_status
   INTO
     v_source_class,
@@ -259,14 +263,16 @@ DECLARE
   v_effective_from timestamptz;
   v_effective_to timestamptz;
   v_source_class text;
+  v_agreement_domains jsonb;
+  v_invalid_domain_count integer;
 BEGIN
   SELECT institution_id
     INTO v_portfolio_institution
     FROM qassas_core.institution_portfolio
    WHERE portfolio_id = NEW.portfolio_id;
 
-  SELECT institution_id, agreement_status, effective_from, effective_to
-    INTO v_agreement_institution, v_agreement_status, v_effective_from, v_effective_to
+  SELECT institution_id, agreement_status, effective_from, effective_to, allowed_domains
+    INTO v_agreement_institution, v_agreement_status, v_effective_from, v_effective_to, v_agreement_domains
     FROM qassas_core.institution_access_agreement
    WHERE agreement_id = NEW.agreement_id;
 
@@ -283,6 +289,19 @@ BEGIN
 
   IF v_source_class <> 'PRIVATE_CONTRACTUAL' THEN
     RAISE EXCEPTION 'Private source connection requires PRIVATE_CONTRACTUAL source';
+  END IF;
+
+  SELECT count(*)::int
+    INTO v_invalid_domain_count
+    FROM jsonb_array_elements_text(NEW.allowed_domains) requested(domain)
+   WHERE NOT EXISTS (
+     SELECT 1
+       FROM jsonb_array_elements_text(COALESCE(v_agreement_domains, '[]'::jsonb)) allowed(domain)
+      WHERE allowed.domain = requested.domain
+   );
+
+  IF v_invalid_domain_count > 0 THEN
+    RAISE EXCEPTION 'Connection data scope exceeds agreement scope';
   END IF;
 
   IF NEW.connection_status = 'CONNECTED'
