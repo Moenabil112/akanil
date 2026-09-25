@@ -286,7 +286,7 @@ export class TaadeenAdapterService {
     }
 
     const parsed = parseTaadeenLicenceHtml(html, licenseNumber);
-    if (!parsed.ok || !parsed.record || !normalizedHash) {
+    if (!parsed.ok || !parsed.record || !parsed.normalized_hash) {
       return this.quarantine(
         context, runId, licenseNumber, sourceUrl, retrievedAt, response.status, html,
         "TAADEN_SCHEMA_DRIFT",
@@ -296,7 +296,7 @@ export class TaadeenAdapterService {
     }
 
     const record = parsed.record;
-    const normalizedHash = normalizedHash;
+    const normalizedHash = parsed.normalized_hash;
     const rawPayloadHash = createHash("sha256").update(html).digest("hex");
     const previous = await this.previousAcceptedSnapshot(context.portfolio_id, licenseNumber);
     const changedFields = changedTaadeenFields(previous?.normalized_payload ?? null, record);
