@@ -25,6 +25,14 @@ export class InstitutionOnboardingController {
     return this.onboarding.status(institutionId, actor);
   }
 
+  @Get("institutions/:institutionId/agreements")
+  listAgreements(
+    @Param("institutionId") institutionId: string,
+    @CurrentActor() actor: AuthenticatedActor,
+  ) {
+    return this.onboarding.listAgreements(institutionId, actor);
+  }
+
   @Post("agreements")
   recordAgreement(
     @Body()

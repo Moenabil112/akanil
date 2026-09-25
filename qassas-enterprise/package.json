@@ -30,7 +30,8 @@
     "workbench:serve": "node workbench/server.mjs",
     "o3:workbench-check": "node scripts/o3-workbench-check.mjs",
     "e2e:o3-institutional-isolation": "node scripts/e2e-o3-institutional-isolation.mjs",
-    "e2e:o3-m1-admin-activation": "node scripts/e2e-o3-m1-admin-activation.mjs"
+    "e2e:o3-m1-admin-activation": "node scripts/e2e-o3-m1-admin-activation.mjs",
+    "o3:m2-contract-scope-check": "node scripts/o3-m2-contract-scope-check.mjs"
   },
   "engines": {
     "node": ">=22"

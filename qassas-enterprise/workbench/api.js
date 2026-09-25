@@ -92,6 +92,29 @@ export class QassasApi {
     );
   }
 
+  agreements(institutionId) {
+    return this.request(
+      `/institutional-onboarding/institutions/${encodeURIComponent(institutionId)}/agreements`,
+    );
+  }
+
+  recordAgreement(payload) {
+    return this.request("/institutional-onboarding/agreements", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  activatePrivateSource(portfolioId, sourceId, agreementId) {
+    return this.request(
+      `/institutional-onboarding/portfolios/${encodeURIComponent(portfolioId)}/sources/${encodeURIComponent(sourceId)}/activate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ agreement_id: agreementId }),
+      },
+    );
+  }
+
   issueAdminActivationTicket(institutionId, expectedEmail, expiresInHours = 48) {
     return this.request(
       `/institutional-onboarding/institutions/${encodeURIComponent(institutionId)}/admin-activation-tickets`,
