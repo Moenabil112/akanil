@@ -286,7 +286,7 @@ export class TaadeenAdapterService {
     }
 
     const parsed = parseTaadeenLicenceHtml(html, licenseNumber);
-    if (!parsed.ok || !parsed.record || !parsed.normalized_hash) {
+    if (!parsed.ok || !parsed.record || !normalizedHash) {
       return this.quarantine(
         context, runId, licenseNumber, sourceUrl, retrievedAt, response.status, html,
         "TAADEN_SCHEMA_DRIFT",
@@ -295,12 +295,14 @@ export class TaadeenAdapterService {
       );
     }
 
+    const record = parsed.record;
+    const normalizedHash = normalizedHash;
     const rawPayloadHash = createHash("sha256").update(html).digest("hex");
     const previous = await this.previousAcceptedSnapshot(context.portfolio_id, licenseNumber);
-    const changedFields = changedTaadeenFields(previous?.normalized_payload ?? null, parsed.record);
+    const changedFields = changedTaadeenFields(previous?.normalized_payload ?? null, record);
     const changeType: SyncItemResult["change_type"] = !previous
       ? "FIRST_SEEN"
-      : previous.normalized_payload_hash === parsed.normalized_hash
+      : previous.normalized_payload_hash === normalizedHash
         ? "UNCHANGED"
         : "CHANGED";
 
@@ -312,17 +314,17 @@ export class TaadeenAdapterService {
         "INSERT INTO qassas_core.public_source_snapshot (snapshot_id, portfolio_id, source_id, adapter_id, source_object_id, source_url, parser_version, source_updated_at, retrieved_at, http_status, raw_payload_hash, normalized_payload_hash, normalized_payload, validation_status) VALUES ($1,$2,'SRC-TAADEN','ADP-TAADEN-LICENCE-PAGE',$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,'ACCEPTED')",
         [
           snapshotId, context.portfolio_id, licenseNumber, sourceUrl,
-          TAADEN_PARSER_VERSION, parsed.record.source_updated_at,
+          TAADEN_PARSER_VERSION, record.source_updated_at,
           retrievedAt.toISOString(), response.status, rawPayloadHash,
-          parsed.normalized_hash, JSON.stringify(parsed.record),
+          normalizedHash, JSON.stringify(record),
         ],
       );
 
       await client.query(
         "INSERT INTO qassas_core.source_ingestion_record (ingestion_record_id, ingestion_run_id, source_object_id, source_object_type, source_version, source_updated_at, retrieved_at, payload_hash, normalized_object_type, normalized_object_id, validation_status, data_domain, security_class, provenance) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'PORTFOLIO_ASSET',$9,'ACCEPTED','LICENCES','C0_PUBLIC',$10::jsonb)",
         [
-          "IR-" + randomUUID(), runId, licenseNumber, parsed.record.asset_type,
-          TAADEN_PARSER_VERSION, parsed.record.source_updated_at,
+          "IR-" + randomUUID(), runId, licenseNumber, record.asset_type,
+          TAADEN_PARSER_VERSION, record.source_updated_at,
           retrievedAt.toISOString(), rawPayloadHash, assetId,
           JSON.stringify({
             source_url: sourceUrl,
@@ -330,14 +332,14 @@ export class TaadeenAdapterService {
             adapter_id: this.adapterId,
             parser_version: TAADEN_PARSER_VERSION,
             snapshot_id: snapshotId,
-            normalized_payload_hash: parsed.normalized_hash,
+            normalized_payload_hash: normalizedHash,
             warnings: parsed.warnings,
             correlation_id: correlationId,
           }),
         ],
       );
 
-      await this.upsertAsset(client, context, assetId, parsed.record, retrievedAt);
+      await this.upsertAsset(client, context, assetId, record, retrievedAt);
 
       await client.query(
         "INSERT INTO qassas_core.public_source_change_event (change_event_id, portfolio_id, source_id, adapter_id, source_object_id, snapshot_id, previous_snapshot_id, change_type, changed_fields) VALUES ($1,$2,'SRC-TAADEN','ADP-TAADEN-LICENCE-PAGE',$3,$4,$5,$6,$7::jsonb)",
@@ -356,7 +358,7 @@ export class TaadeenAdapterService {
       changed_fields: changedFields,
       asset_id: assetId,
       quarantine_reason: null,
-      source_updated_at: parsed.record.source_updated_at,
+      source_updated_at: record.source_updated_at,
     };
   }
 
