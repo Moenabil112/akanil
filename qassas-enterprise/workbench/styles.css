@@ -786,3 +786,33 @@ button, input, select { font: inherit; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ---------------- M3 Taadeen live adapter ---------------- */
+
+.source-runtime {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+}
+
+.source-runtime > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: .76rem;
+}
+
+.source-runtime > div > span:first-child {
+  color: var(--muted);
+}
+
+.source-runtime p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: .73rem;
+  line-height: 1.45;
+}
