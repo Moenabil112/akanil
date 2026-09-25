@@ -20,6 +20,7 @@ const state = {
   assets: [],
   onboarding: null,
   agreements: [],
+  taadeen: null,
   assetFilter: "",
 };
 
@@ -112,11 +113,12 @@ async function loadPortfolio(portfolioId) {
   sessionStorage.setItem("qassas.workbench.portfolio_id", portfolioId);
 
   const portfolio = await api.portfolio(portfolioId);
-  const [pipeline, assets, onboarding, agreements] = await Promise.all([
+  const [pipeline, assets, onboarding, agreements, taadeen] = await Promise.all([
     api.pipelineStatus(portfolioId),
     api.assets(portfolioId),
     api.onboardingStatus(portfolio.institution.institution_id),
     api.agreements(portfolio.institution.institution_id),
+    api.taadeenStatus(portfolioId),
   ]);
 
   state.selectedPortfolio = portfolio;
@@ -124,6 +126,7 @@ async function loadPortfolio(portfolioId) {
   state.assets = assets.assets || [];
   state.onboarding = onboarding;
   state.agreements = agreements.agreements || [];
+  state.taadeen = taadeen;
 
   renderPortfolio();
 }
@@ -155,7 +158,7 @@ function renderPortfolio() {
   renderAdaptiveSurface(p);
   renderInstitutionAccess(p, state.onboarding);
   renderAssets();
-  renderSources(pipeline);
+  renderSources(pipeline, state.taadeen);
   renderPartnerLayer(p, pipeline);
 }
 
@@ -416,13 +419,38 @@ function renderAssets() {
   `;
 }
 
-function renderSources(pipeline) {
+function renderSources(pipeline, taadeen) {
   const grid = el("source-grid");
   grid.innerHTML = (pipeline.sources || []).map((source) => {
     const latest = source.latest_run;
     const adapterSummary = (source.adapters || [])
       .map((adapter) => `${humanize(adapter.adapter_kind)} · ${humanize(adapter.status)}`)
       .join("<br />");
+
+    const taadeenRuntime =
+      source.source_id === "SRC-TAADEN" && taadeen
+        ? `
+          <div class="source-runtime">
+            <div>
+              <span>Live adapter</span>
+              ${pill(
+                humanize(taadeen.runtime?.status || "NEVER_RUN"),
+                ["HEALTHY"].includes(taadeen.runtime?.status) ? "good" :
+                  ["DEGRADED", "SCHEMA_DRIFT"].includes(taadeen.runtime?.status) ? "warn" : "neutral",
+              )}
+            </div>
+            <div>
+              <span>Parser</span>
+              <strong>${escapeHtml(taadeen.parser_version || "—")}</strong>
+            </div>
+            <div>
+              <span>Recent changes</span>
+              <strong>${(taadeen.recent_changes || []).length}</strong>
+            </div>
+            <p>Public regulatory updates may refresh Asset Registry records only. Target and Decision creation remain disabled.</p>
+          </div>
+        `
+        : "";
 
     return `
       <article class="source-card">
@@ -440,6 +468,7 @@ function renderSources(pipeline) {
           <div><dt>Records</dt><dd>${latest ? latest.record_count : "—"}</dd></div>
         </dl>
         <div class="adapter-list">${adapterSummary || "No adapter contract"}</div>
+        ${taadeenRuntime}
       </article>
     `;
   }).join("");
