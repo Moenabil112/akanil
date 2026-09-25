@@ -1,6 +1,6 @@
 # QASSAS Repository Governance Closure — RGC-01 — Rev 0.1
 
-**Status:** ACTIVE — CLOSURE IN PROGRESS  
+**Status:** PASS — ENGINEERING CLOSURE COMPLETE / GITHUB ADMIN ACTION OPEN  
 **Date:** 2026-09-25  
 **Repository:** `Moenabil112/akanil`
 
@@ -83,7 +83,22 @@ The first governed release baseline after M3 is:
 
 This is a TEST_READY engineering baseline. It is not UAT_READY, PILOT_READY, or Production Ready.
 
-## 8. Next phase
+## 8. Closure record
+
+Completed by RGC-01:
+
+- PR #98 merged into the O3 integration branch;
+- release branch created: `qassas/release-o3-m3-test-ready`;
+- stacked PRs #2, #12, #41, #66, #75, #92, #93 and #94 closed as superseded;
+- merged M1/M2/M3 PRs #95, #96 and #97 preserved as merged records;
+- SEC-00A issue #11 closed as completed;
+- release-branch CI triggers added for Operational Readiness, O2 TEST and O3 Institutional Model;
+- Sprint regression already applies to all `qassas/**` branches;
+- GitHub administrative settings are tracked separately in issue #99.
+
+RGC-01 engineering closure is complete. GitHub server-enforced branch/default-branch controls remain an explicit repository-admin action and do not block M4 engineering work from the governed release baseline.
+
+## 9. Next phase
 
 After RGC-01 PASS:
 
