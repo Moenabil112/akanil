@@ -81,3 +81,6 @@ jobs:
       - name: Verify Term Sheet and partner-data contract scope
         run: npm run o3:m2-contract-scope-check
 
+      - name: Verify Taadeen live adapter and change detection
+        run: npm run o3:m3-taadeen-check
+
