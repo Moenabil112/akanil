@@ -34,6 +34,22 @@
           institution selector alone.
         </p>
         <button id="login-button" class="button button-primary" type="button">Sign in</button>
+
+        <div class="activation-box">
+          <div class="eyebrow">Institution admin activation</div>
+          <h2>Have an activation ticket?</h2>
+          <p>
+            Enter the one-time ticket issued by the QASSAS platform administrator.
+            The ticket can only be claimed by a Keycloak identity whose verified
+            email matches the invitation.
+          </p>
+          <div class="activation-form">
+            <input id="activation-ticket-id" class="input" type="text" autocomplete="off" placeholder="Activation ticket ID" />
+            <input id="activation-code" class="input" type="password" autocomplete="one-time-code" placeholder="One-time activation code" />
+            <button id="activate-button" class="button button-primary" type="button">Activate institutional access</button>
+          </div>
+          <div id="activation-message" class="activation-message" hidden></div>
+        </div>
       </section>
     </div>
 
@@ -46,6 +62,7 @@
 
         <nav class="nav" aria-label="Workbench sections">
           <a href="#overview" class="nav-item active">Portfolio Overview</a>
+          <a href="#institution-access" class="nav-item">Institution Access</a>
           <a href="#assets" class="nav-item">Assets & Mineral Rights</a>
           <a href="#data-sources" class="nav-item">Data Sources</a>
           <a href="#decision-context" class="nav-item">Decision Context</a>
@@ -104,6 +121,44 @@
             <span id="surface-mode" class="pill">—</span>
           </div>
           <div id="surface-body" class="surface-body"></div>
+        </section>
+
+        <section id="institution-access" class="panel">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow">Verified institutional identity</div>
+              <h2>Institution Access</h2>
+            </div>
+            <span id="account-login-state" class="pill">—</span>
+          </div>
+          <div class="access-grid">
+            <article class="surface-card">
+              <span class="surface-kicker">Institutional account</span>
+              <strong id="account-status">—</strong>
+              <p id="account-binding-status">—</p>
+            </article>
+            <article class="surface-card">
+              <span class="surface-kicker">Primary administrator</span>
+              <strong id="primary-admin-status">—</strong>
+              <p id="primary-admin-activated-at">—</p>
+            </article>
+            <article id="activation-admin-card" class="surface-card">
+              <span class="surface-kicker">Activation control</span>
+              <strong>Issue verified invite</strong>
+              <p>System Admin only. The activation secret is shown once and is never stored in plaintext.</p>
+              <div class="activation-form compact">
+                <input id="admin-activation-email" class="input" type="email" autocomplete="off" placeholder="Verified institutional admin email" />
+                <select id="admin-activation-expiry" class="select">
+                  <option value="24">24 hours</option>
+                  <option value="48" selected>48 hours</option>
+                  <option value="72">72 hours</option>
+                  <option value="168">7 days</option>
+                </select>
+                <button id="issue-activation-button" class="button button-primary" type="button">Issue activation ticket</button>
+              </div>
+              <div id="issued-activation-secret" class="activation-secret" hidden></div>
+            </article>
+          </div>
         </section>
 
         <section id="assets" class="panel">

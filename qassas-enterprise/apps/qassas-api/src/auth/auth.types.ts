@@ -19,3 +19,10 @@ export interface AuthenticatedActor {
   roleAssignments: RoleAssignment[];
   claims: JWTPayload;
 }
+
+export interface VerifiedKeycloakIdentity {
+  externalSubject: string;
+  email: string | null;
+  emailVerified: boolean;
+  claims: JWTPayload;
+}

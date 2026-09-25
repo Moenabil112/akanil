@@ -42,6 +42,8 @@ for (const required of [
 for (const required of [
   "/institutional-portfolios",
   "/data-pipeline/portfolios/",
+  "/institutional-onboarding/institutions/",
+  "/admin-activation-tickets",
 ]) {
   assert.ok(api.includes(required), `Workbench API client missing route: ${required}`);
 }
@@ -60,6 +62,26 @@ assert.ok(auth.includes("code_challenge_method"), "PKCE challenge method is requ
 assert.ok(auth.includes("S256"), "PKCE S256 is required");
 assert.ok(!auth.includes("localStorage"), "Access tokens must not use localStorage");
 assert.ok(html.includes("Institutional Portfolio Workbench"));
+assert.ok(
+  html.includes("Activate institutional access"),
+  "Institutional self-activation surface is required",
+);
+assert.ok(
+  html.includes("Issue activation ticket"),
+  "System Admin activation-ticket surface is required",
+);
+assert.ok(
+  app.includes("activateInstitutionalAccess"),
+  "Workbench must implement self-activation flow",
+);
+assert.ok(
+  app.includes("issueActivationTicket"),
+  "Workbench must implement admin activation-ticket flow",
+);
+assert.ok(
+  app.includes("qassas.activation.ticket_id"),
+  "Activation must survive the OIDC redirect in sessionStorage",
+);
 assert.ok(css.includes("@media (max-width: 780px)"), "Mobile breakpoint is required");
 
 const webClient = realm.clients.find((client) => client.clientId === "qassas-web");
@@ -93,6 +115,8 @@ console.log(
       adaptive_portfolio_ui: "PASS",
       responsive_ui: "PASS",
       private_term_sheet_surface: "PASS",
+      institutional_admin_activation_ui: "PASS",
+      activation_redirect_state: "SESSION_ONLY",
     },
     null,
     2,
