@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "qassas/o3-institutional-portfolios-data-pipeline"
+      - "qassas/release-**"
+      - "qassas/repository-governance-closure"
     paths:
       - "qassas-enterprise/**"
       - ".github/workflows/qassas-o3-institutional-portfolios.yml"
