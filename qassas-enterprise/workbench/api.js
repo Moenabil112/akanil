@@ -80,6 +80,25 @@ export class QassasApi {
     );
   }
 
+  taadeenStatus(portfolioId) {
+    return this.request(
+      `/public-sources/taadeen/portfolios/${encodeURIComponent(portfolioId)}/status`,
+    );
+  }
+
+  syncTaadeen(portfolioId, licenseNumbers = [], maxRecords = 50) {
+    return this.request(
+      `/public-sources/taadeen/portfolios/${encodeURIComponent(portfolioId)}/sync`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          license_numbers: licenseNumbers,
+          max_records: maxRecords,
+        }),
+      },
+    );
+  }
+
   assets(portfolioId) {
     return this.request(
       `/data-pipeline/portfolios/${encodeURIComponent(portfolioId)}/assets`,

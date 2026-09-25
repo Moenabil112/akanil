@@ -46,6 +46,7 @@ for (const required of [
   "/admin-activation-tickets",
   "/agreements",
   "/sources/",
+  "/public-sources/taadeen/portfolios/",
 ]) {
   assert.ok(api.includes(required), `Workbench API client missing route: ${required}`);
 }
@@ -96,6 +97,18 @@ assert.ok(
   app.includes("allowed_domains"),
   "Workbench must surface contract-scoped allowed domains",
 );
+assert.ok(
+  api.includes("taadeenStatus"),
+  "Workbench API must expose Taadeen live adapter status",
+);
+assert.ok(
+  app.includes("Live adapter"),
+  "Workbench must surface Taadeen live adapter health",
+);
+assert.ok(
+  app.includes("Target and Decision creation remain disabled"),
+  "Workbench must preserve advisory-only Taadeen boundary",
+);
 assert.ok(css.includes("@media (max-width: 780px)"), "Mobile breakpoint is required");
 
 const webClient = realm.clients.find((client) => client.clientId === "qassas-web");
@@ -134,6 +147,8 @@ console.log(
       term_sheet_registry_ui: "PASS",
       partner_source_activation_ui: "PASS",
       contract_scope_visibility: "PASS",
+      taadeen_live_adapter_status_ui: "PASS",
+      taadeen_no_auto_target_boundary: "PASS",
     },
     null,
     2,
