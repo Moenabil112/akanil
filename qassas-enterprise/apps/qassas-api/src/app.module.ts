@@ -14,6 +14,7 @@ import { MultiAssetModule } from "./multi-asset/multi-asset.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { PortfolioControlModule } from "./portfolio-control/portfolio-control.module";
 import { PortfolioIntelligenceModule } from "./portfolio-intelligence/portfolio-intelligence.module";
+import { TaadeenAdapterModule } from "./public-sources/taadeen/taadeen-adapter.module";
 import { RecommendationModule } from "./recommendation/recommendation.module";
 import { RightsModule } from "./rights/rights.module";
 import { TargetModule } from "./target/target.module";
@@ -36,6 +37,7 @@ import { TemporalModule } from "./temporal/temporal.module";
     RightsModule,
     PortfolioControlModule,
     PortfolioIntelligenceModule,
+    TaadeenAdapterModule,
     MultiAssetModule,
     ObservabilityModule,
     DecisionModule,
