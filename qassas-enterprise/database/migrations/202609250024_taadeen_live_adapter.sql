@@ -88,6 +88,11 @@ CREATE TABLE IF NOT EXISTS qassas_core.source_adapter_runtime_state (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+UPDATE qassas_core.source_adapter_contract
+SET configuration = configuration || '{"parser_version":"TAADEN_HTML_V1","production_host":"taadeen.sa","http_timeout_ms_default":10000,"max_payload_bytes_default":2000000,"schema_drift_policy":"QUARANTINE","automated_target_creation":false}'::jsonb,
+    updated_at = now()
+WHERE adapter_id = 'ADP-TAADEN-LICENCE-PAGE';
+
 INSERT INTO qassas_core.source_adapter_runtime_state (
   adapter_id, runtime_status
 )
