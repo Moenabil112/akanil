@@ -43,7 +43,7 @@ jobs:
       QASSAS_DB_NAME: qassas
       QASSAS_DB_USER: qassas
       QASSAS_DB_PASSWORD: qassas-ci
-      QASSAS_REQUIRED_MIGRATION: 202609240023_term_sheet_partner_data_scope.sql
+      QASSAS_REQUIRED_MIGRATION: 202609250024_taadeen_live_adapter.sql
 
     steps:
       - uses: actions/checkout@v4
