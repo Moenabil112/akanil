@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "qassas/operationalisation-**"
+      - "qassas/release-**"
+      - "qassas/repository-governance-closure"
     paths:
       - "qassas-enterprise/**"
       - ".github/workflows/qassas-operational-readiness.yml"
